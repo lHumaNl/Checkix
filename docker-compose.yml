@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: checkix_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-checkix}:${POSTGRES_PASSWORD:-checkix}@db:5432/${POSTGRES_DB:-checkix}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - checkix_network
+
+  db:
+    image: postgres:16-alpine
+    container_name: checkix_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-checkix}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-checkix}
+      - POSTGRES_DB=${POSTGRES_DB:-checkix}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-checkix} -d ${POSTGRES_DB:-checkix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - checkix_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: checkix_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - checkix_network
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: checkix_celery_worker
+    restart: unless-stopped
+    command: celery -A checkix worker --loglevel=info --concurrency=4
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-checkix}:${POSTGRES_PASSWORD:-checkix}@db:5432/${POSTGRES_DB:-checkix}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    networks:
+      - checkix_network
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: checkix_celery_beat
+    restart: unless-stopped
+    command: celery -A checkix beat --loglevel=info
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-checkix}:${POSTGRES_PASSWORD:-checkix}@db:5432/${POSTGRES_DB:-checkix}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    networks:
+      - checkix_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: checkix_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/mediafiles:ro
+    depends_on:
+      - web
+    networks:
+      - checkix_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+
+networks:
+  checkix_network:
+    driver: bridge

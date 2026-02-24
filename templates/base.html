@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}Checkix - Enterprise Checklist Management{% endblock %}">
+    <meta name="author" content="Checkix">
+    <title>{% block title %}Checkix{% endblock %}</title>
+    
+    {% block meta %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% endblock %}
+    
+    {% block stylesheets %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/base.css">
+    {% block extra_styles %}{% endblock %}
+    {% endblock %}
+    
+    {% block favicon %}
+    <link rel="icon" type="image/x-icon" href="{{ STATIC_URL }}favicon.ico">
+    {% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    {% block skip_link %}
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    {% endblock %}
+    
+    {% block header %}
+    <header class="site-header" role="banner">
+        <nav class="navbar" role="navigation" aria-label="Main navigation">
+            <div class="container">
+                <a href="/" class="navbar-brand">
+                    <span class="brand-icon">cx</span>
+                    <span class="brand-text">Checkix</span>
+                </a>
+                
+                <button class="navbar-toggle" 
+                        type="button" 
+                        aria-expanded="false" 
+                        aria-controls="main-nav"
+                        aria-label="Toggle navigation">
+                    <span class="hamburger"></span>
+                </button>
+                
+                <div id="main-nav" class="navbar-collapse">
+                    {% block main_nav %}
+                    <ul class="nav-links">
+                        <li><a href="/checklists/">Checklists</a></li>
+                        <li><a href="/calendar/">Calendar</a></li>
+                        <li><a href="/stats/">Statistics</a></li>
+                    </ul>
+                    {% endblock %}
+                    
+                    {% block user_nav %}
+                    <ul class="nav-user">
+                        {% if user.is_authenticated %}
+                        <li class="dropdown">
+                            <button class="dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+                                {{ user.username }}
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="/profile/">Profile</a></li>
+                                <li><a href="/settings/">Settings</a></li>
+                                <li><hr></li>
+                                <li><a href="/logout/">Logout</a></li>
+                            </ul>
+                        </li>
+                        {% else %}
+                        <li><a href="/login/">Login</a></li>
+                        <li><a href="/register/">Register</a></li>
+                        {% endif %}
+                    </ul>
+                    {% endblock %}
+                </div>
+            </div>
+        </nav>
+    </header>
+    {% endblock %}
+    
+    {% block messages %}
+    {% if messages %}
+    <div class="messages-container" role="alert" aria-live="polite">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" data-dismiss="alert">
+            {{ message }}
+            <button type="button" class="close" aria-label="Close">&times;</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endblock %}
+    
+    <main id="main-content" class="main-content" role="main">
+        {% block breadcrumb %}
+        {% if breadcrumb %}
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+                <li><a href="/">Home</a></li>
+                {% for item in breadcrumb %}
+                {% if forloop.last %}
+                <li aria-current="page">{{ item.title }}</li>
+                {% else %}
+                <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+                {% endif %}
+                {% endfor %}
+            </ol>
+        </nav>
+        {% endif %}
+        {% endblock %}
+        
+        {% block content %}
+        {% endblock %}
+    </main>
+    
+    {% block footer %}
+    <footer class="site-footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Checkix</h4>
+                    <p>Enterprise checklist management platform.</p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="/docs/">Documentation</a></li>
+                        <li><a href="/api/docs/">API</a></li>
+                        <li><a href="/support/">Support</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/privacy/">Privacy Policy</a></li>
+                        <li><a href="/terms/">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; {% now "Y" %} Checkix. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+    
+    {% block javascript %}
+    <script src="{{ STATIC_URL }}js/base.js"></script>
+    {% block extra_scripts %}{% endblock %}
+    {% endblock %}
+    
+    {% block analytics %}
+    {% if not debug %}
+    <script>
+        // Analytics placeholder
+    </script>
+    {% endif %}
+    {% endblock %}
+</body>
+</html>

@@ -1,0 +1,8 @@
+export { TemplateMarketplace } from './TemplateMarketplace'
+export { FeaturedCarousel } from './FeaturedCarousel'
+export { CategoryFilter } from './CategoryFilter'
+export { TemplateCard } from './TemplateCard'
+export { TemplatePreview } from './TemplatePreview'
+export { StarRating } from './StarRating'
+export { AuthorProfile } from './AuthorProfile'
+export { ReviewSection } from './ReviewSection'

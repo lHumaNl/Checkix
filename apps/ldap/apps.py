@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class LdapConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.ldap'
+    verbose_name = 'LDAP Integration'
