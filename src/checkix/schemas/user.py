@@ -14,6 +14,7 @@ from checkix.schemas.common import ORMSchema
 # Profile
 # ---------------------------------------------------------------------------
 
+
 class UserProfileOut(ORMSchema):
     id: int
     timezone: Optional[str] = None
@@ -37,6 +38,7 @@ class UserProfileUpdate(BaseModel):
 # User
 # ---------------------------------------------------------------------------
 
+
 class UserOut(ORMSchema):
     id: int
     username: str
@@ -49,11 +51,13 @@ class UserOut(ORMSchema):
 
 class UserMeOut(UserOut):
     profile: Optional[UserProfileOut] = None
+    date_joined: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------------------
 # Group
 # ---------------------------------------------------------------------------
+
 
 class GroupOut(ORMSchema):
     id: int
