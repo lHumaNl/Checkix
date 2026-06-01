@@ -389,7 +389,7 @@ export function RunLinksPage() {
   const { data, isLoading } = useRunLinks(queryParams)
   const deleteMutation = useDeleteRunLink()
 
-  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.results ?? [])
+  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.items ?? [])
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return

@@ -1,4 +1,11 @@
 export interface DashboardStats {
+  // Backend fields (DashboardStatsOut)
+  total_templates: number
+  active_instances: number
+  completed_today: number
+  overdue_instances: number
+  avg_completion_rate: number | null
+  // Frontend compatibility fields (with defaults)
   total_checklists: number
   completed_checklists: number
   total_todos: number

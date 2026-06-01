@@ -392,7 +392,7 @@ function RulesTab() {
   if (filterActive === 'false') params.is_active = false
 
   const { data, isLoading, isError } = useNotificationRules(params)
-  const rules = Array.isArray(data) ? data : (data?.results ?? [])
+  const rules = Array.isArray(data) ? data : (data?.items ?? [])
 
   return (
     <div className="space-y-4">
@@ -486,7 +486,7 @@ function LogsTab() {
   if (filterStatus) params.status = filterStatus
 
   const { data, isLoading, isError } = useNotificationLogs(params)
-  const logs = Array.isArray(data) ? data : (data?.results ?? [])
+  const logs = Array.isArray(data) ? data : (data?.items ?? [])
 
   return (
     <div className="space-y-4">

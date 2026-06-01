@@ -34,11 +34,21 @@ export function CalendarPage() {
 
   const handleSubmitEvent = useCallback(
     async (data: CalendarEventCreate) => {
+      // Map frontend field names to backend field names
+      const payload = {
+        title: data.title,
+        description: data.description,
+        start_time: data.start_datetime,
+        end_time: data.end_datetime,
+        all_day: data.all_day,
+        color: data.color,
+        event_type: data.event_type,
+      }
       if (selectedEvent) {
-        await updateMutation.mutateAsync({ id: selectedEvent.id, ...data })
+        await updateMutation.mutateAsync({ id: selectedEvent.id, ...payload })
         toast({ title: 'Event updated' })
       } else {
-        await createMutation.mutateAsync(data)
+        await createMutation.mutateAsync(payload)
         toast({ title: 'Event created' })
       }
       setSelectedEvent(null)

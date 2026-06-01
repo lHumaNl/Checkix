@@ -475,7 +475,7 @@ export function AssignmentsPage() {
 
   const deleteMutation = useDeleteAssignment()
 
-  const assignments: Assignment[] = Array.isArray(data) ? data : (data?.results ?? [])
+  const assignments: Assignment[] = Array.isArray(data) ? data : (data?.items ?? [])
   const hasFilters = Boolean(search || assignmentTypeFilter || assigneeTypeFilter)
 
   const handleDeleteClick = (assignment: Assignment) => {

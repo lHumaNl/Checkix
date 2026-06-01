@@ -96,7 +96,7 @@ export function useBulkDeleteChecklists() {
       if (previousData) {
         queryClient.setQueryData<PaginatedResponse<ChecklistTemplate>>(
           ['checklists'],
-          { ...previousData, results: previousData.results.filter(item => !ids.includes(item.id)) }
+          { ...previousData, items: previousData.items.filter(item => !ids.includes(item.id)) }
         )
       }
       

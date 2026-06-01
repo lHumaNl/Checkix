@@ -545,7 +545,7 @@ export function WebhooksPage() {
   const deleteMutation = useDeleteWebhook()
 
   const { data, isLoading } = useWebhooks({ search: search || undefined })
-  const webhooks = Array.isArray(data) ? data : (data?.results ?? [])
+  const webhooks = Array.isArray(data) ? data : (data?.items ?? [])
 
   const filtered =
     eventTypeFilter === 'all'

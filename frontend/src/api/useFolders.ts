@@ -7,7 +7,7 @@ export function useFolders() {
     queryKey: ['folders'],
     queryFn: async () => {
       const { data } = await client.get('/folders')
-      return Array.isArray(data) ? data : (data.results ?? []) as Folder[]
+      return Array.isArray(data) ? data : (data.items ?? []) as Folder[]
     },
   })
 }
@@ -17,7 +17,7 @@ export function useFolderTree() {
     queryKey: ['folders', 'tree'],
     queryFn: async () => {
       const { data } = await client.get('/folders/tree')
-      const folders = Array.isArray(data) ? data : (data.results ?? []) as Folder[]
+      const folders = Array.isArray(data) ? data : (data.items ?? []) as Folder[]
       return buildTree(folders)
     },
   })

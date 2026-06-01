@@ -128,7 +128,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
     } else {
       createChecklist.mutate(
         {
-          title: data.title,
+          name: data.title,
           description: data.description || '',
           category: data.category || '',
           tags: data.tags,

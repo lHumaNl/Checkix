@@ -62,7 +62,7 @@ export function ChecklistsPage() {
     )
   }
 
-  const checklists = checklistsData?.results || []
+  const checklists = checklistsData?.items || []
   const filteredChecklists = checklists
 
   const handleSelect = (id: number, selected: boolean) => {

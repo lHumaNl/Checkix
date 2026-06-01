@@ -11,6 +11,7 @@ export interface User {
 
 export interface ChecklistTemplate {
   id: number
+  name: string
   title: string
   description: string | null
   category: string | null
@@ -204,14 +205,15 @@ export interface ApiError {
 }
 
 export interface PaginatedResponse<T> {
-  count: number
-  next: string | null
-  previous: string | null
-  results: T[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+  items: T[]
 }
 
 export interface ChecklistTemplateCreate {
-  title: string
+  name: string
   description?: string | null
   category?: string | null
   tags?: string[]
@@ -225,7 +227,7 @@ export interface ChecklistTemplateCreate {
 }
 
 export interface ChecklistTemplateUpdate {
-  title?: string
+  name?: string
   description?: string | null
   category?: string | null
   tags?: string[]

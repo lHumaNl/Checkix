@@ -398,13 +398,17 @@ export function DashboardPage() {
     )
   }
 
+  const totalChecklists = stats.total_checklists ?? stats.total_templates ?? 0
+  const completedChecklists = stats.completed_checklists ?? stats.completed_today ?? 0
   const checklistPercent =
-    stats.total_checklists > 0
-      ? Math.round((stats.completed_checklists / stats.total_checklists) * 100)
+    totalChecklists > 0
+      ? Math.round((completedChecklists / totalChecklists) * 100)
       : 0
+  const totalTodos = stats.total_todos ?? 0
+  const completedTodos = stats.completed_todos ?? 0
   const todoPercent =
-    stats.total_todos > 0
-      ? Math.round((stats.completed_todos / stats.total_todos) * 100)
+    totalTodos > 0
+      ? Math.round((completedTodos / totalTodos) * 100)
       : 0
 
   return (
@@ -453,7 +457,7 @@ export function DashboardPage() {
           <StatisticCard style={{ height: '100%' }}
             statistic={{
               title: 'Completed Checklists',
-              value: stats.completed_checklists,
+              value: stats.completed_checklists ?? stats.completed_today ?? 0,
               icon: (
                 <Avatar
                   style={{ backgroundColor: '#f6ffed' }}
@@ -464,10 +468,10 @@ export function DashboardPage() {
               description: (
                 <Space size={4}>
                   <Tag
-                    color={stats.weekly_change >= 0 ? 'success' : 'error'}
+                    color={(stats.weekly_change ?? 0) >= 0 ? 'success' : 'error'}
                   >
-                    {stats.weekly_change >= 0 ? '+' : ''}
-                    {stats.weekly_change}%
+                    {(stats.weekly_change ?? 0) >= 0 ? '+' : ''}
+                    {stats.weekly_change ?? 0}%
                   </Tag>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     vs last week
@@ -481,7 +485,7 @@ export function DashboardPage() {
           <StatisticCard style={{ height: '100%' }}
             statistic={{
               title: 'Total Todos',
-              value: stats.total_todos,
+              value: stats.total_todos ?? 0,
               icon: (
                 <Avatar
                   style={{ backgroundColor: '#e6f4ff' }}
@@ -504,7 +508,7 @@ export function DashboardPage() {
           <StatisticCard style={{ height: '100%' }}
             statistic={{
               title: 'Upcoming Events',
-              value: stats.upcoming_events,
+              value: stats.upcoming_events ?? stats.overdue_instances ?? 0,
               icon: (
                 <Avatar
                   style={{ backgroundColor: '#f9f0ff' }}
@@ -519,7 +523,7 @@ export function DashboardPage() {
           <StatisticCard style={{ height: '100%' }}
             statistic={{
               title: 'Current Streak',
-              value: stats.streak_days ?? 0,
+              value: stats.streak_days ?? stats.active_instances ?? 0,
               suffix: 'days',
               icon: (
                 <Avatar
@@ -615,7 +619,7 @@ export function DashboardPage() {
               <Col style={{ textAlign: 'center' }}>
                 <Progress
                   type="circle"
-                  percent={stats.completion_rate ?? 0}
+                  percent={stats.completion_rate ?? stats.avg_completion_rate ?? 0}
                   size={100}
                   strokeWidth={8}
                   strokeColor="#722ed1"
