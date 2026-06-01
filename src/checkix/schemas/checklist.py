@@ -29,7 +29,7 @@ class ChecklistTemplateListOut(ORMSchema):
 
 class ChecklistTemplateOut(ChecklistTemplateListOut):
     tags: list[TagOut] = []
-    current_version: Optional[ChecklistVersionOut] = None
+    current_version: Optional[int] = None
 
 
 class ChecklistTemplateCreate(BaseModel):
