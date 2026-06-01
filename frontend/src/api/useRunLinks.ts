@@ -11,7 +11,7 @@ const publicClient = axios.create({
 
 export interface RunLink {
   id: number
-  checklist_template: number
+  template_id: number
   checklist_template_name: string
   unique_id: string
   name: string
@@ -50,7 +50,7 @@ export function useCreateRunLink() {
   return useMutation({
     mutationFn: async (payload: {
       name: string
-      checklist_template: number
+      template_id: number
       access_type: 'public' | 'restricted'
       expires_at?: string
       max_uses?: number

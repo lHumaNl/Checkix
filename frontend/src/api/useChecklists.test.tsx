@@ -37,8 +37,8 @@ describe('useChecklists', () => {
     
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     
-    expect(result.current.data?.results).toHaveLength(2)
-    expect(result.current.data?.results[0].title).toBe('Test Checklist 1')
+    expect(result.current.data?.items).toHaveLength(2)
+    expect(result.current.data?.items[0].title).toBe('Test Checklist 1')
   })
 
   it('handles error state', async () => {

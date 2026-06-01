@@ -7,7 +7,7 @@ export function useTags() {
     queryKey: ['tags'],
     queryFn: async () => {
       const { data } = await client.get('/tags')
-      return Array.isArray(data) ? data : (data.results ?? []) as Tag[]
+      return Array.isArray(data) ? data : (data.items ?? []) as Tag[]
     },
   })
 }

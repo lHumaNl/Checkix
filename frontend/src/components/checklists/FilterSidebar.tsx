@@ -57,7 +57,7 @@ export function FilterSidebar({
     <motion.aside
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-64 flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 p-4 space-y-6"
+      className="w-full sm:w-64 sm:flex-shrink-0 bg-white dark:bg-gray-900 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-800 p-4 space-y-4 sm:space-y-6"
     >
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-gray-900 dark:text-white">Filters</h3>

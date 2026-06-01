@@ -78,7 +78,7 @@ export function ChecklistDetailPage() {
   const handleStartInstance = () => {
     if (checklist) {
       createInstance.mutate(
-        { name: checklist.title, template: Number(checklist.id) },
+        { name: checklist.name || checklist.title, template: Number(checklist.id) },
         {
           onSuccess: (instance) => {
             navigate(`/instances/${instance.id}`)

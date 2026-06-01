@@ -116,7 +116,7 @@ function CreateRunLinkModal({ onClose }: CreateRunLinkModalProps) {
 
     const payload: Parameters<typeof createMutation.mutate>[0] = {
       name: form.name.trim(),
-      checklist_template: templateId,
+      template_id: templateId,
       access_type: form.access_type,
     }
     if (form.expires_at) payload.expires_at = form.expires_at
@@ -389,7 +389,7 @@ export function RunLinksPage() {
   const { data, isLoading } = useRunLinks(queryParams)
   const deleteMutation = useDeleteRunLink()
 
-  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.results ?? [])
+  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.items ?? [])
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return

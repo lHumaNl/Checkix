@@ -313,9 +313,9 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select a template</option>
-                {(checklistsData?.results ?? []).map((tpl) => (
+                {(checklistsData?.items ?? []).map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
-                    {tpl.title}
+                    {tpl.name || tpl.title}
                   </option>
                 ))}
               </select>

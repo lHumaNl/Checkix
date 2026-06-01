@@ -534,7 +534,7 @@ export function TodosPage() {
   const { data, isLoading } = useTodoLists({ search, status: statusFilter })
   const createList = useCreateTodoList()
 
-  const lists = Array.isArray(data) ? data : (data?.results ?? [])
+  const lists = Array.isArray(data) ? data : (data?.items ?? [])
 
   const handleCreate = (name: string, description: string, priority: TodoList['priority']) => {
     createList.mutate(

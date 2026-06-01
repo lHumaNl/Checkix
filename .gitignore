@@ -70,3 +70,19 @@ frontend/e2e/.auth/*
 .claude/
 
 ui-audit/
+
+# Screenshots and test images
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Backup files
+*.bak
+docker-compose.override.yml.bak
+
+# Workflow scripts (temporary)
+scripts/wf-phase*.js
+
+# Stray root-level files
+/DashboardPage.tsx

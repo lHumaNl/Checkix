@@ -108,10 +108,13 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
         {
            id: checklist.id,
            data: {
-             ...data,
+             name: data.title,
              description: data.description || '',
              category: data.category || '',
+             tags: data.tags,
              folder_id: data.folder_id || null,
+             execution_mode: data.execution_mode,
+             status: data.status,
            },
          },
         {
@@ -128,7 +131,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
     } else {
       createChecklist.mutate(
         {
-          title: data.title,
+          name: data.title,
           description: data.description || '',
           category: data.category || '',
           tags: data.tags,

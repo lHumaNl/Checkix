@@ -30,7 +30,7 @@ interface ActivityFeedProps {
 
 export function ActivityFeed({ limit = 10 }: ActivityFeedProps) {
   const { data, isLoading, error } = useActivityFeed(1, limit)
-  const activities = data?.results ?? []
+  const activities = data?.items ?? []
 
   if (isLoading) {
     return (

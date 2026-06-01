@@ -46,7 +46,7 @@ export function ChecklistCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       whileHover={{ y: isDragging ? 0 : -4, boxShadow: isDragging ? undefined : '0 12px 24px -8px rgba(0, 0, 0, 0.15)' }}
-      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow"
+      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow h-full flex flex-col"
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">

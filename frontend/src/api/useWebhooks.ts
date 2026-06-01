@@ -52,11 +52,10 @@ export function useCreateWebhook() {
   return useMutation({
     mutationFn: async (payload: {
       name: string
-      event_type: string
-      endpoint_url: string
+      events: string[]
+      url: string
       secret?: string
       is_active?: boolean
-      headers?: Record<string, string>
     }) => {
       const { data } = await client.post<Webhook>('/webhooks/', payload)
       return data

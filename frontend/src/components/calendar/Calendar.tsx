@@ -147,7 +147,7 @@ function CustomToolbar({ label, onNavigate, onView, view }: CustomToolbarProps) 
   ]
 
   return (
-    <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-gray-200 dark:border-gray-800">
       <div className="flex items-center gap-2">
         <button
           onClick={() => onNavigate('TODAY')}
@@ -169,7 +169,7 @@ function CustomToolbar({ label, onNavigate, onView, view }: CustomToolbarProps) 
         </button>
         <span className="text-lg font-semibold text-gray-900 dark:text-white ml-2">{label}</span>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {views.map((v) => (
           <button
             key={v.value}

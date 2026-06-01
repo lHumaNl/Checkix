@@ -146,3 +146,37 @@ body {
 .slide-in-from-top-full { animation-name: slide-in-from-top-full; }
 .slide-in-from-bottom-full { animation-name: slide-in-from-bottom-full; }
 .slide-out-to-right-full { animation-name: slide-out-to-right-full; }
+
+/* ---- Grid card stretching ---- */
+/* Ensure direct children of CSS grid containers stretch to fill their cells.
+   This fixes cards inside grid layouts not filling the full width/height. */
+[class*="grid"] > .rounded-xl,
+[class*="grid"] > .rounded-lg {
+  width: 100%;
+  min-height: 100%;
+}
+
+/* ---- Mobile touch targets (44px minimum) ---- */
+@media (max-width: 576px) {
+  .ant-btn-icon-only {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .ant-btn {
+    min-height: 44px;
+  }
+  .ant-select-selector {
+    min-height: 44px;
+  }
+  .ant-input {
+    min-height: 44px;
+  }
+  .ant-picker {
+    min-height: 44px;
+  }
+  a, [role="button"] {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}

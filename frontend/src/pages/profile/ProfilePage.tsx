@@ -146,11 +146,13 @@ export function ProfilePage() {
   if (!profile) return null
 
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username
-  const memberSince = new Date(profile.date_joined).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
+  const memberSince = profile.date_joined
+    ? new Date(profile.date_joined).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'N/A'
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

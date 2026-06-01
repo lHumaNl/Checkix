@@ -55,7 +55,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: UserMeUpdate) => {
-      const { data } = await client.patch<UserMe>('/users/me/', payload)
+      const { data } = await client.put<UserMe>('/users/me/', payload)
       return data
     },
     onSuccess: (data) => {

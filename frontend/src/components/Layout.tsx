@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -20,9 +20,20 @@ import {
   Sun,
   Moon,
   Monitor,
+  LogOut,
 } from 'lucide-react'
 import { useSearch } from '@/api/useSearch'
 import { useTheme } from '@/hooks/useTheme'
+import { useAuth } from '@/contexts/AuthContext'
+import { Avatar } from '@/components/ui/Avatar'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/Dropdown'
 
 interface LayoutProps {
   children: ReactNode
@@ -203,15 +214,108 @@ function SearchBar() {
   )
 }
 
+function UserDropdown() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const displayName = user?.full_name || user?.username || 'User'
+  const initials = displayName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="User menu"
+        >
+          <Avatar
+            size="sm"
+            src={user?.avatar_url || undefined}
+            alt={displayName}
+            fallback={initials}
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{displayName}</p>
+            {user?.email && (
+              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            )}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => navigate('/profile')}>
+          <UserCircle size={16} />
+          Profile
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={logout}>
+          <LogOut size={16} />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+const MOBILE_BREAKPOINT = 1024 // matches Tailwind's lg breakpoint
+
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, cycleTheme } = useTheme()
   const location = useLocation()
 
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  const openSidebar = useCallback(() => setSidebarOpen(true), [])
+
+  // Auto-close sidebar when viewport shrinks below the breakpoint
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < MOBILE_BREAKPOINT) {
+        setSidebarOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Close sidebar on route change (mobile UX)
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
+
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [sidebarOpen])
+
   return (
     <div className="min-h-screen flex">
+      {/* Mobile overlay — rendered outside aside to guarantee it covers the viewport */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      )}
+
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 max-w-[85vw] bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -220,13 +324,14 @@ export function Layout({ children }: LayoutProps) {
             Checkix
           </Link>
           <button
-            onClick={() => setSidebarOpen(false)}
+            onClick={closeSidebar}
             className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Close sidebar"
           >
             <X size={20} />
           </button>
         </div>
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = location.pathname === item.to
@@ -234,7 +339,7 @@ export function Layout({ children }: LayoutProps) {
               <Link
                 key={item.to}
                 to={item.to}
-                onClick={() => setSidebarOpen(false)}
+                onClick={closeSidebar}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
@@ -249,18 +354,12 @@ export function Layout({ children }: LayoutProps) {
         </nav>
       </aside>
 
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={openSidebar}
             className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            aria-label="Open sidebar"
           >
             <Menu size={20} />
           </button>
@@ -279,6 +378,8 @@ export function Layout({ children }: LayoutProps) {
             {theme === 'dark' && <Moon size={20} />}
             {theme === 'system' && <Monitor size={20} />}
           </button>
+
+          <UserDropdown />
         </header>
 
         <main className="flex-1 p-4 md:p-6 bg-gray-50 dark:bg-gray-950 overflow-auto">

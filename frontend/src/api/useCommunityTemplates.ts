@@ -10,7 +10,7 @@ export function useCommunityTemplates(category?: string, search?: string) {
       if (category && category !== 'all') params.append('category', category)
       if (search) params.append('search', search)
       const { data } = await client.get(`/community/templates?${params}`)
-      return Array.isArray(data) ? data : (data.results ?? []) as CommunityTemplate[]
+      return Array.isArray(data) ? data : (data.items ?? []) as CommunityTemplate[]
     },
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 30,
@@ -22,7 +22,7 @@ export function useFeaturedTemplates() {
     queryKey: ['featured-templates'],
     queryFn: async () => {
       const { data } = await client.get('/community/templates/featured')
-      return Array.isArray(data) ? data : (data.results ?? []) as CommunityTemplate[]
+      return Array.isArray(data) ? data : (data.items ?? []) as CommunityTemplate[]
     },
     staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 30,
@@ -45,7 +45,7 @@ export function useTemplateReviews(templateId: number) {
     queryKey: ['template-reviews', templateId],
     queryFn: async () => {
       const { data } = await client.get(`/community/templates/${templateId}/reviews`)
-      return Array.isArray(data) ? data : (data.results ?? []) as CommunityReview[]
+      return Array.isArray(data) ? data : (data.items ?? []) as CommunityReview[]
     },
     enabled: !!templateId,
   })

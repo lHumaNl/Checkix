@@ -23,7 +23,7 @@ interface StatCardProps {
 
 function StatCard({ icon, label, value, sub }: StatCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
       <div className="flex items-center gap-3 mb-3">
         <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
           {icon}
@@ -170,13 +170,13 @@ export function StatsPage() {
 
       {/* Overall stats cards */}
       {overallLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-28 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           <StatCard
             icon={<Layers size={18} />}
             label="Templates used"
@@ -201,9 +201,9 @@ export function StatsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         {/* Top Templates */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <Award size={18} className="text-yellow-500" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">Top Templates</h2>
@@ -246,7 +246,7 @@ export function StatsPage() {
         </div>
 
         {/* By Category */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} className="text-purple-500" />
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">By Category</h2>
