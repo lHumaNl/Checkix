@@ -42,7 +42,7 @@ export const handlers = [
       count: 2,
       next: null,
       previous: null,
-      results: [
+      items: [
         {
           id: 1,
           title: 'Test Checklist 1',
@@ -137,7 +137,7 @@ export const handlers = [
       count: 1,
       next: null,
       previous: null,
-      results: [
+      items: [
         {
           id: 1,
           template_id: 1,

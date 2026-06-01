@@ -16,7 +16,7 @@ export function useSearch(query: string) {
       const { data } = await client.get('/search/', {
         params: { q: query },
       })
-      return data.results ?? data.items ?? { tags: [], folders: [], checklists: [], todos: [] }
+      return data.items ?? { tags: [], folders: [], checklists: [], todos: [] }
     },
     enabled: query.trim().length >= 2,
     staleTime: 30 * 1000,

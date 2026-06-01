@@ -219,8 +219,8 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
 
     const payload = {
       name: form.name.trim(),
-      event_type: form.event_type,
-      endpoint_url: form.endpoint_url.trim(),
+      events: [form.event_type],
+      url: form.endpoint_url.trim(),
       is_active: form.is_active,
       ...(form.secret ? { secret: form.secret } : {}),
     }

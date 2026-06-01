@@ -4,12 +4,12 @@ import type { ChartDataPoint, HeatmapData } from '@/types/dashboard'
 
 async function fetchCompletionChart(): Promise<ChartDataPoint[]> {
   const { data } = await client.get('/dashboard/chart/completion')
-  return Array.isArray(data) ? data : (data.results ?? []) as ChartDataPoint[]
+  return Array.isArray(data) ? data : (data.items ?? []) as ChartDataPoint[]
 }
 
 async function fetchHeatmapData(): Promise<HeatmapData[]> {
   const { data } = await client.get('/dashboard/heatmap')
-  return Array.isArray(data) ? data : (data.results ?? []) as HeatmapData[]
+  return Array.isArray(data) ? data : (data.items ?? []) as HeatmapData[]
 }
 
 export function useCompletionChart() {
@@ -42,7 +42,7 @@ export function useStatsByDateRange(startDate: string, endDate: string) {
         const { data } = await client.get('/stats/by_date_range/', {
           params: { start_date: startDate, end_date: endDate },
         })
-        const items = Array.isArray(data) ? data : (data.items ?? data.results ?? data)
+        const items = Array.isArray(data) ? data : (data.items ?? data)
         return (items as TrendData[]).reverse()
       } catch {
         // Fallback: return empty data when endpoint is not available

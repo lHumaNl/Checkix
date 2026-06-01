@@ -44,21 +44,18 @@ export function useAssignments(
   })
 }
 
+export interface CreateAssignmentPayload {
+  template_id: number
+  assignee_type?: string
+  assignee_id?: number
+  due_date?: string
+  notes?: string
+}
+
 export function useCreateAssignment() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: {
-      assignment_type: string
-      assignee_type: string
-      assignee_user?: number
-      assignee_group?: number
-      assignee_parameter?: string
-      checklist_template?: number
-      checklist_item?: number
-      checklist_instance?: number
-      is_exclusive?: boolean
-      auto_notify?: boolean
-    }) => {
+    mutationFn: async (payload: CreateAssignmentPayload) => {
       const { data } = await client.post<Assignment>('/assignments/', payload)
       return data
     },

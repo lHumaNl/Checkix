@@ -8,7 +8,7 @@ async function fetchActivityFeed(page = 1, limit = 20): Promise<PaginatedRespons
   })
   // Backend returns {items, total, page, page_size, total_pages} from paginate()
   // Items are CompletionLog objects - map to ActivityItem
-  const rawItems = data.items ?? data.results ?? []
+  const rawItems = data.items ?? []
   const mappedItems: ActivityItem[] = rawItems.map((item: Record<string, unknown>) => ({
     id: item.id as number,
     type: (item.action as string)?.includes('todo') ? 'todo' as const :

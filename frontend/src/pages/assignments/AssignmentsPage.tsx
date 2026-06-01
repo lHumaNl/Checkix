@@ -182,29 +182,15 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
     if (!validate()) return
 
     const payload: Parameters<typeof createMutation.mutate>[0] = {
-      assignment_type: form.assignment_type,
+      template_id: Number(form.checklist_template),
       assignee_type: form.assignee_type,
-      is_exclusive: form.is_exclusive,
-      auto_notify: form.auto_notify,
     }
 
-    if (form.assignment_type === 'template') {
-      payload.checklist_template = Number(form.checklist_template)
-    }
-    if (form.assignment_type === 'item') {
-      payload.checklist_item = Number(form.checklist_item)
-    }
-    if (form.assignment_type === 'runtime') {
-      payload.checklist_instance = Number(form.checklist_instance)
-    }
     if (form.assignee_type === 'user') {
-      payload.assignee_user = Number(form.assignee_user)
+      payload.assignee_id = Number(form.assignee_user)
     }
     if (form.assignee_type === 'group') {
-      payload.assignee_group = Number(form.assignee_group)
-    }
-    if (form.assignee_type === 'parameter') {
-      payload.assignee_parameter = form.assignee_parameter.trim()
+      payload.assignee_id = Number(form.assignee_group)
     }
 
     createMutation.mutate(payload, {

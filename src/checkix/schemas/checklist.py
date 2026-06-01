@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from checkix.schemas.common import ORMSchema
 from checkix.schemas.tag import TagOut
@@ -29,7 +29,7 @@ class ChecklistTemplateListOut(ORMSchema):
 
 class ChecklistTemplateOut(ChecklistTemplateListOut):
     tags: list[TagOut] = []
-    current_version: Optional[int] = None
+    current_version: Optional[int] = Field(default=None, validation_alias="current_version_id")
 
 
 class ChecklistTemplateCreate(BaseModel):

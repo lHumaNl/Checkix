@@ -116,7 +116,7 @@ function CreateRunLinkModal({ onClose }: CreateRunLinkModalProps) {
 
     const payload: Parameters<typeof createMutation.mutate>[0] = {
       name: form.name.trim(),
-      checklist_template: templateId,
+      template_id: templateId,
       access_type: form.access_type,
     }
     if (form.expires_at) payload.expires_at = form.expires_at

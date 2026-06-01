@@ -159,7 +159,7 @@ export function ChecklistsPage() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col sm:flex-row h-full">
       {showFilters && (
         <FilterSidebar
           search={search}
@@ -213,7 +213,7 @@ export function ChecklistsPage() {
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`hidden sm:block px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                 showFilters
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
                   : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
