@@ -64,7 +64,7 @@ export function StatsCard({
   }, [numericValue])
 
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-lg dark:bg-gray-800">
+    <div className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-lg dark:bg-gray-800 h-full flex flex-col">
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>

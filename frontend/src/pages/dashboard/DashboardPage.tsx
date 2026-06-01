@@ -96,7 +96,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
         <StatsCard
           title="Completed Checklists"
           value={stats.completed_checklists}
@@ -126,8 +126,8 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+      <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800 h-full flex flex-col">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Completion Trends
@@ -140,8 +140,8 @@ export function DashboardPage() {
         <CompletionTrendChart data={trendData ?? []} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+      <div className="grid gap-6 lg:grid-cols-2 items-stretch">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800 h-full flex flex-col">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Activity Heatmap
@@ -153,7 +153,7 @@ export function DashboardPage() {
           <ActivityHeatmap />
         </div>
 
-        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800">
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-gray-800 h-full flex flex-col">
           <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">
             Progress Overview
           </h2>

@@ -146,3 +146,12 @@ body {
 .slide-in-from-top-full { animation-name: slide-in-from-top-full; }
 .slide-in-from-bottom-full { animation-name: slide-in-from-bottom-full; }
 .slide-out-to-right-full { animation-name: slide-out-to-right-full; }
+
+/* ---- Grid card stretching ---- */
+/* Ensure direct children of CSS grid containers stretch to fill their cells.
+   This fixes cards inside grid layouts not filling the full width/height. */
+[class*="grid"] > .rounded-xl,
+[class*="grid"] > .rounded-lg {
+  width: 100%;
+  min-height: 100%;
+}
