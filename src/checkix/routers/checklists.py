@@ -97,6 +97,53 @@ async def _set_tags(
     template.tags = found
 
 
+async def _load_checklist_item_tree(
+    db: AsyncSession,
+    version_id: int,
+) -> list[ChecklistItemOut]:
+    """Load all items for a version and return a fully materialized tree."""
+    result = await db.execute(
+        select(ChecklistItem)
+        .where(ChecklistItem.version_id == version_id)
+        .order_by(ChecklistItem.parent_id, ChecklistItem.order, ChecklistItem.id)
+    )
+    items = list(result.scalars().all())
+
+    children_by_parent: dict[int | None, list[ChecklistItem]] = {}
+    for item in items:
+        children_by_parent.setdefault(item.parent_id, []).append(item)
+
+    def build_subtree(item: ChecklistItem) -> ChecklistItemOut:
+        return ChecklistItemOut(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            order=item.order,
+            is_required=item.is_required,
+            priority=item.priority,
+            is_halt=item.is_halt,
+            halt_message=item.halt_message,
+            children=[build_subtree(child) for child in children_by_parent.get(item.id, [])],
+        )
+
+    return [build_subtree(item) for item in children_by_parent.get(None, [])]
+
+
+async def _load_checklist_item_subtree(
+    db: AsyncSession,
+    version_id: int,
+    item_id: int,
+) -> ChecklistItemOut:
+    """Return one item subtree from a fully materialized version tree."""
+    stack = await _load_checklist_item_tree(db, version_id)
+    while stack:
+        item = stack.pop()
+        if item.id == item_id:
+            return item
+        stack.extend(item.children)
+    raise NotFoundException(detail="Checklist item not found")
+
+
 # ---------------------------------------------------------------------------
 # Template CRUD
 # ---------------------------------------------------------------------------
@@ -458,7 +505,7 @@ async def list_items(
     version_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> list[ChecklistItem]:
+) -> list[ChecklistItemOut]:
     """Return all items for a specific checklist version.
 
     Only root-level items (``parent_id is None``) are returned; children are
@@ -467,15 +514,7 @@ async def list_items(
     await _get_template_or_404(db, template_id, current_user.id)
     await _get_version_or_404(db, template_id, version_id)
 
-    result = await db.execute(
-        select(ChecklistItem)
-        .where(
-            ChecklistItem.version_id == version_id,
-            ChecklistItem.parent_id.is_(None),
-        )
-        .order_by(ChecklistItem.order)
-    )
-    return list(result.scalars().all())
+    return await _load_checklist_item_tree(db, version_id)
 
 
 @router.post(
@@ -489,7 +528,7 @@ async def create_item(
     body: ChecklistItemCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> ChecklistItem:
+) -> ChecklistItemOut:
     """Create a new item (and optionally nested children) in a version."""
     await _get_template_or_404(db, template_id, current_user.id)
     await _get_version_or_404(db, template_id, version_id)
@@ -533,5 +572,4 @@ async def create_item(
         await _create_children(item.id, body.children)
 
     await db.commit()
-    await db.refresh(item)
-    return item
+    return await _load_checklist_item_subtree(db, version_id, item.id)

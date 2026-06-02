@@ -1,0 +1,27 @@
+services:
+  fastapi:
+    container_name: checkix_nginx_e2e_fastapi
+    environment:
+      DATABASE_URL: postgresql+asyncpg://checkix:checkix@db:5432/checkix_e2e
+      DATABASE_URL_SYNC: postgresql://checkix:checkix@db:5432/checkix_e2e
+      REDIS_URL: redis://redis:6379/2
+
+  migrate:
+    container_name: checkix_nginx_e2e_migrate
+    environment:
+      DATABASE_URL: postgresql+asyncpg://checkix:checkix@db:5432/checkix_e2e
+      DATABASE_URL_SYNC: postgresql://checkix:checkix@db:5432/checkix_e2e
+      REDIS_URL: redis://redis:6379/2
+
+  nginx:
+    container_name: checkix_nginx_e2e_nginx
+    ports:
+      - "18080:80"
+
+  db:
+    container_name: checkix_nginx_e2e_db
+    environment:
+      POSTGRES_DB: checkix_e2e
+
+  redis:
+    container_name: checkix_nginx_e2e_redis

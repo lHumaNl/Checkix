@@ -15,6 +15,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from checkix.database import get_db
 from checkix.main import create_app
@@ -40,7 +41,7 @@ class AuthenticatedUser:
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     """Create the test schema once when PostgreSQL is available."""
     database_url = _test_database_url()
-    engine = create_async_engine(database_url, pool_pre_ping=True)
+    engine = create_async_engine(database_url, pool_pre_ping=True, poolclass=NullPool)
     try:
         await _assert_database_is_available(engine)
         await _reset_schema(engine, database_url)
