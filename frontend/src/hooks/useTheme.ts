@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useCallback, useMemo, useSyncExternalStore } from 'react'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
+
+const THEME_STORAGE_KEY = 'theme'
+const THEME_CHANGE_EVENT = 'checkix-theme-change'
 
 function getSystemPreference(): boolean {
   if (typeof window === 'undefined') return false
@@ -9,11 +12,20 @@ function getSystemPreference(): boolean {
 
 function getStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'system'
-  const stored = localStorage.getItem('theme')
+  const stored = localStorage.getItem(THEME_STORAGE_KEY)
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored
   }
   return 'system'
+}
+
+function subscribeToStoredTheme(callback: () => void) {
+  window.addEventListener('storage', callback)
+  window.addEventListener(THEME_CHANGE_EVENT, callback)
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener(THEME_CHANGE_EVENT, callback)
+  }
 }
 
 function subscribeToSystemPreference(callback: () => void) {
@@ -27,7 +39,11 @@ function getSystemPreferenceSnapshot() {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<ThemeMode>(getStoredTheme)
+  const theme = useSyncExternalStore(
+    subscribeToStoredTheme,
+    getStoredTheme,
+    () => 'system' as ThemeMode
+  )
   const systemPrefersDark = useSyncExternalStore(
     subscribeToSystemPreference,
     getSystemPreferenceSnapshot,
@@ -50,8 +66,8 @@ export function useTheme() {
   }, [isDark])
 
   const setTheme = useCallback((newTheme: ThemeMode) => {
-    setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
+    localStorage.setItem(THEME_STORAGE_KEY, newTheme)
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT))
   }, [])
 
   const cycleTheme = useCallback(() => {

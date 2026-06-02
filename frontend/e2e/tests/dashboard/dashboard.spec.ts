@@ -2,10 +2,6 @@ import { test, expect } from '../../fixtures/auth.fixture'
 import { mockApiError } from '../../utils/helpers'
 
 test.describe('Dashboard Page', () => {
-  test.beforeEach(async ({ authenticatedPage }) => {
-    // authenticatedPage already logs in and lands on dashboard
-  })
-
   test('renders dashboard heading', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()

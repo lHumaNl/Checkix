@@ -1,4 +1,4 @@
-export { Button, buttonVariants, type ButtonProps } from './Button'
+export { Button, type ButtonProps } from './Button'
 export { Input, type InputProps } from './Input'
 export { Textarea, type TextareaProps } from './Textarea'
 export {
@@ -31,7 +31,7 @@ export {
   CardDescription,
   CardContent,
 } from './Card'
-export { Badge, badgeVariants, type BadgeProps } from './Badge'
+export { Badge, type BadgeProps } from './Badge'
 export {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -64,6 +64,6 @@ export { Skeleton } from './Skeleton'
 export { EmptyState } from './EmptyState'
 export { DataTable, type Column } from './DataTable'
 export { Progress } from './Progress'
-export { Avatar, avatarVariants } from './Avatar'
-export { Spinner, spinnerVariants } from './Spinner'
+export { Avatar } from './Avatar'
+export { Spinner } from './Spinner'
 export { Toaster } from './Toaster'

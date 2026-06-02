@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { CalendarEvent } from '@/types'
+import { useI18n } from '@/i18n'
 
 interface MiniCalendarProps {
   events?: CalendarEvent[]
@@ -13,6 +14,7 @@ interface MiniCalendarProps {
 
 export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentMonth: externalMonth, onMonthChange }: MiniCalendarProps) {
   const [internalMonth, setInternalMonth] = useState(new Date())
+  const { language, t } = useI18n()
   const currentMonth = externalMonth ?? internalMonth
 
   const monthStart = startOfMonth(currentMonth)
@@ -21,6 +23,7 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
 
   const startDay = monthStart.getDay()
   const emptyDays = Array(startDay).fill(null)
+  const weekdayLabels = getWeekdayLabels(language)
 
   const hasEventOnDay = (date: Date) => {
     if (!Array.isArray(events)) return false
@@ -49,18 +52,20 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          {format(currentMonth, 'MMMM yyyy')}
+          {currentMonth.toLocaleDateString(language, { month: 'long', year: 'numeric' })}
         </h3>
         <div className="flex gap-1">
           <button
             onClick={handlePrevMonth}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            aria-label={t('calendar.previous')}
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={handleNextMonth}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            aria-label={t('calendar.next')}
           >
             <ChevronRight size={16} />
           </button>
@@ -68,8 +73,8 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-          <div key={i} className="text-xs text-gray-400 text-center font-medium">
+        {weekdayLabels.map((day, index) => (
+          <div key={`${day}-${index}`} className="text-xs text-gray-400 text-center font-medium">
             {day}
           </div>
         ))}
@@ -106,6 +111,15 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
       </div>
     </div>
   )
+}
+
+function getWeekdayLabels(language: string) {
+  const baseDate = new Date(2024, 0, 7)
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(baseDate)
+    date.setDate(baseDate.getDate() + index)
+    return date.toLocaleDateString(language, { weekday: 'short' }).slice(0, 1)
+  })
 }
 
 export default MiniCalendar

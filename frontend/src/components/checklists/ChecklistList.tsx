@@ -9,6 +9,8 @@ import {
   GripVertical,
 } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { ChecklistTemplate } from '@/types'
 import { TagPills } from './TagPills'
 
@@ -27,6 +29,12 @@ const statusColors = {
   archived: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
 }
 
+const statusLabelKeys = {
+  draft: 'status.draft',
+  active: 'status.active',
+  archived: 'status.archived',
+} as const satisfies Record<'draft' | 'active' | 'archived', MessageKey>
+
 export function ChecklistList({
   checklists,
   onDuplicate,
@@ -35,6 +43,7 @@ export function ChecklistList({
   onSelect,
   onSelectAll,
 }: ChecklistListProps) {
+  const { t } = useI18n()
   const allSelected = checklists.length > 0 && selectedIds.length === checklists.length
 
   return (
@@ -48,10 +57,10 @@ export function ChecklistList({
             className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
         </div>
-        <div>Title</div>
-        <div>Status</div>
-        <div>Items</div>
-        <div>Uses</div>
+        <div>{t('checklists.titleLabel')}</div>
+        <div>{t('common.status')}</div>
+        <div>{t('checklists.items')}</div>
+        <div>{t('checklists.uses')}</div>
         <div />
       </div>
 
@@ -94,12 +103,12 @@ export function ChecklistList({
 
             <div>
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[checklist.status || 'draft']}`}>
-                {checklist.status || 'draft'}
+                {t(statusLabelKeys[checklist.status || 'draft'])}
               </span>
             </div>
 
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              {checklist.items?.length || 0} items
+              {t('checklists.itemsCount', { count: checklist.items?.length || 0 })}
             </div>
 
             <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -126,7 +135,7 @@ export function ChecklistList({
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none"
                       >
                         <Edit size={14} />
-                        Edit
+                        {t('common.edit')}
                       </Link>
                     </DropdownMenu.Item>
                     <DropdownMenu.Item asChild>
@@ -135,7 +144,7 @@ export function ChecklistList({
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
                       >
                         <Copy size={14} />
-                        Duplicate
+                        {t('checklists.duplicate')}
                       </button>
                     </DropdownMenu.Item>
                     <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
@@ -145,7 +154,7 @@ export function ChecklistList({
                         className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
                       >
                         <Trash2 size={14} />
-                        Delete
+                        {t('common.delete')}
                       </button>
                     </DropdownMenu.Item>
                   </DropdownMenu.Content>

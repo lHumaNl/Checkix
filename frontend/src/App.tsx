@@ -1,11 +1,20 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ConfigProvider, theme as antdTheme } from 'antd'
+import dayjs from 'dayjs'
+import 'dayjs/locale/ru'
+import 'dayjs/locale/es'
+import 'dayjs/locale/de'
+import 'dayjs/locale/fr'
+import 'dayjs/locale/zh-cn'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Toaster } from '@/components/ui/Toaster'
+import { I18nProvider, useI18n } from '@/i18n'
+import { useTheme } from '@/hooks/useTheme'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage').then(m => ({ default: m.LoginPage })))
 const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
@@ -40,56 +49,92 @@ function PageLoader() {
   )
 }
 
+function AppContent() {
+  const { isDark } = useTheme()
+  const { antdLocale, language } = useI18n()
+
+  useEffect(() => {
+    dayjs.locale(language === 'zh' ? 'zh-cn' : language)
+  }, [language])
+
+  const theme = useMemo(
+    () => ({
+      algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+      cssVar: true,
+      token: {
+        colorPrimary: '#2563eb',
+        borderRadius: 10,
+        colorBgLayout: isDark ? '#030712' : '#f9fafb',
+        colorBgContainer: isDark ? '#111827' : '#ffffff',
+        colorBorder: isDark ? '#1f2937' : '#e5e7eb',
+      },
+      components: {
+        Card: { colorBgContainer: isDark ? '#111827' : '#ffffff' },
+        Table: { colorBgContainer: isDark ? '#111827' : '#ffffff' },
+      },
+    }),
+    [isDark]
+  )
+
+  return (
+    <ConfigProvider locale={antdLocale} theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={
+                <Suspense fallback={<PageLoader />}>
+                  <LoginPage />
+                </Suspense>
+              } />
+              <Route path="/run/:uniqueId" element={
+                <Suspense fallback={<PageLoader />}>
+                  <RunLinkExecutePage />
+                </Suspense>
+              } />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <ErrorBoundary>
+                        <Suspense fallback={<PageLoader />}>
+                          <Routes>
+                            <Route path="/" element={<DashboardPage />} />
+                            <Route path="/checklists" element={<ChecklistsPage />} />
+                            <Route path="/checklists/:id" element={<ChecklistDetailPage />} />
+                            <Route path="/instances/:id" element={<ChecklistInstancePage />} />
+                            <Route path="/todos" element={<TodosPage />} />
+                            <Route path="/calendar" element={<CalendarPage />} />
+                            <Route path="/community" element={<CommunityPage />} />
+                            <Route path="/assignments" element={<AssignmentsPage />} />
+                            <Route path="/run-links" element={<RunLinksPage />} />
+                            <Route path="/webhooks" element={<WebhooksPage />} />
+                            <Route path="/notifications" element={<NotificationsPage />} />
+                            <Route path="/stats" element={<StatsPage />} />
+                            <Route path="/profile" element={<ProfilePage />} />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                          </Routes>
+                        </Suspense>
+                      </ErrorBoundary>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+            <Toaster />
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ConfigProvider>
+  )
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={
-              <Suspense fallback={<PageLoader />}>
-                <LoginPage />
-              </Suspense>
-            } />
-            <Route path="/run/:uniqueId" element={
-              <Suspense fallback={<PageLoader />}>
-                <RunLinkExecutePage />
-              </Suspense>
-            } />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <ErrorBoundary>
-                      <Suspense fallback={<PageLoader />}>
-                        <Routes>
-                          <Route path="/" element={<DashboardPage />} />
-                          <Route path="/checklists" element={<ChecklistsPage />} />
-                          <Route path="/checklists/:id" element={<ChecklistDetailPage />} />
-                          <Route path="/instances/:id" element={<ChecklistInstancePage />} />
-                          <Route path="/todos" element={<TodosPage />} />
-                          <Route path="/calendar" element={<CalendarPage />} />
-                          <Route path="/community" element={<CommunityPage />} />
-                          <Route path="/assignments" element={<AssignmentsPage />} />
-                          <Route path="/run-links" element={<RunLinksPage />} />
-                          <Route path="/webhooks" element={<WebhooksPage />} />
-                          <Route path="/notifications" element={<NotificationsPage />} />
-                          <Route path="/stats" element={<StatsPage />} />
-                          <Route path="/profile" element={<ProfilePage />} />
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                      </Suspense>
-                    </ErrorBoundary>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-          <Toaster />
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <I18nProvider>
+      <AppContent />
+    </I18nProvider>
   )
 }
 

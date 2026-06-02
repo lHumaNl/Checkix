@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Star, MessageSquare, Send } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import type { CommunityReview } from '@/types'
 import { StarRating } from './StarRating'
 
@@ -9,6 +10,7 @@ interface ReviewSectionProps {
 }
 
 export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
+  const { t } = useI18n()
   const [newRating, setNewRating] = useState(5)
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -34,12 +36,12 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
     <div className="space-y-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <MessageSquare size={20} />
-        Reviews ({reviews.length})
+        {t('community.reviewsCount', { count: reviews.length })}
       </h3>
 
       <div className="grid md:grid-cols-3 gap-6">
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Rating Distribution</h4>
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('community.ratingDistribution')}</h4>
           <div className="space-y-2">
             {ratingDistribution.map(({ star, count, percentage }) => (
               <div key={star} className="flex items-center gap-2">
@@ -59,15 +61,15 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
 
         <div className="md:col-span-2 space-y-4">
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Write a Review</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('community.writeReview')}</h4>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Your rating:</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('community.yourRating')}</span>
               <StarRating rating={newRating} onChange={setNewRating} interactive size={20} />
             </div>
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Share your experience with this template..."
+              placeholder={t('community.reviewPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
@@ -78,7 +80,7 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
               >
                 <Send size={14} />
-                Submit Review
+                {t('community.submitReview')}
               </button>
             </div>
           </div>
@@ -86,7 +88,7 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
           <div className="space-y-3">
             {reviews.length === 0 ? (
               <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                No reviews yet. Be the first to review!
+                {t('community.noReviews')}
               </div>
             ) : (
               reviews.map((review) => (
@@ -101,8 +103,9 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
 }
 
 function ReviewItem({ review }: { review: CommunityReview }) {
+  const { language } = useI18n()
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(language, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

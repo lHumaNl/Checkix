@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useEffect, useMemo } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
 import { X, Calendar, Clock, Repeat, Link2, Palette, Bell } from 'lucide-react'
 import type { CalendarEvent } from '@/types'
 import { useChecklists } from '@/api/useChecklists'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
-const eventSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
+const eventSchemaBase = z.object({
+  title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   start_datetime: z.string(),
   end_datetime: z.string(),
@@ -17,14 +19,10 @@ const eventSchema = z.object({
   reminder_minutes_before: z.number().nullable(),
   event_type: z.enum(['checklist', 'todo', 'custom']),
   checklist_template: z.number().nullable(),
-}).refine((data) => {
-  if (data.start_datetime && data.end_datetime) {
-    return new Date(data.end_datetime) > new Date(data.start_datetime)
-  }
-  return true
-}, { message: 'End time must be after start time', path: ['end_datetime'] })
+})
 
-type EventFormData = z.infer<typeof eventSchema>
+type EventFormData = z.infer<typeof eventSchemaBase>
+type Translate = (key: MessageKey, values?: Record<string, string | number>) => string
 
 interface EventModalProps {
   isOpen: boolean
@@ -35,42 +33,44 @@ interface EventModalProps {
 }
 
 const eventTypes = [
-  { value: 'custom', label: 'Custom Event', color: 'purple' },
-  { value: 'checklist', label: 'Checklist', color: 'blue' },
-  { value: 'todo', label: 'Todo', color: 'green' },
-]
+  { value: 'custom', labelKey: 'event.typeCustom', color: 'purple' },
+  { value: 'checklist', labelKey: 'event.typeChecklist', color: 'blue' },
+  { value: 'todo', labelKey: 'event.typeTodo', color: 'green' },
+] satisfies Array<{ value: EventFormData['event_type']; labelKey: MessageKey; color: string }>
 
 const colorOptions = [
-  { value: '#3B82F6', label: 'Blue' },
-  { value: '#10B981', label: 'Green' },
-  { value: '#F59E0B', label: 'Yellow' },
-  { value: '#EF4444', label: 'Red' },
-  { value: '#8B5CF6', label: 'Purple' },
-  { value: '#EC4899', label: 'Pink' },
-]
+  { value: '#3B82F6', labelKey: 'event.colorBlue' },
+  { value: '#10B981', labelKey: 'event.colorGreen' },
+  { value: '#F59E0B', labelKey: 'event.colorYellow' },
+  { value: '#EF4444', labelKey: 'event.colorRed' },
+  { value: '#8B5CF6', labelKey: 'event.colorPurple' },
+  { value: '#EC4899', labelKey: 'event.colorPink' },
+] satisfies Array<{ value: string; labelKey: MessageKey }>
 
 const reminderOptions = [
-  { value: null, label: 'No reminder' },
-  { value: 5, label: '5 minutes before' },
-  { value: 15, label: '15 minutes before' },
-  { value: 30, label: '30 minutes before' },
-  { value: 60, label: '1 hour before' },
-  { value: 1440, label: '1 day before' },
-]
+  { value: null, labelKey: 'event.noReminder' },
+  { value: 5, labelKey: 'event.fiveMinutes' },
+  { value: 15, labelKey: 'event.fifteenMinutes' },
+  { value: 30, labelKey: 'event.thirtyMinutes' },
+  { value: 60, labelKey: 'event.oneHour' },
+  { value: 1440, labelKey: 'event.oneDay' },
+] satisfies Array<{ value: number | null; labelKey: MessageKey }>
 
 export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: EventModalProps) {
   const [showRecurrence, setShowRecurrence] = useState(false)
+  const { t } = useI18n()
+  const validationSchema = useMemo(() => createEventSchema(t), [t])
   const { data: checklistsData } = useChecklists({ status: 'active' })
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<EventFormData>({
-    resolver: zodResolver(eventSchema),
+    resolver: zodResolver(validationSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -84,9 +84,9 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
     },
   })
 
-  const isAllDay = watch('all_day')
-  const selectedType = watch('event_type')
-  const selectedColor = watch('color')
+  const isAllDay = useWatch({ control, name: 'all_day' })
+  const selectedType = useWatch({ control, name: 'event_type' })
+  const selectedColor = useWatch({ control, name: 'color' })
 
   useEffect(() => {
     if (event) {
@@ -130,16 +130,16 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
           <div>
             <h2 id="event-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
-              {event ? 'Edit Event' : 'New Event'}
+              {event ? t('event.edit') : t('event.create')}
             </h2>
             <p id="event-modal-description" className="text-sm text-gray-500 dark:text-gray-400">
-              {event ? 'Update the event details below.' : 'Fill in the details to create a new event.'}
+              {event ? t('event.updateDetails') : t('event.createDetails')}
             </p>
           </div>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <X size={20} />
           </button>
@@ -148,12 +148,12 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
         <form onSubmit={handleSubmit(handleFormSubmit)} className="p-4 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Title *
+              {t('event.title')} *
             </label>
             <input
               {...register('title')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Event title"
+              placeholder={t('event.titlePlaceholder')}
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
@@ -162,13 +162,13 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Description
+              {t('event.description')}
             </label>
             <textarea
               {...register('description')}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Event description"
+              placeholder={t('event.descriptionPlaceholder')}
             />
           </div>
 
@@ -180,7 +180,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
             <label htmlFor="all_day" className="text-sm text-gray-700 dark:text-gray-300">
-              All day event
+              {t('event.allDay')}
             </label>
           </div>
 
@@ -189,7 +189,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                  <div className="flex items-center gap-1">
                    <Calendar size={14} />
-                   Start
+                    {t('event.start')}
                  </div>
                </label>
                <input
@@ -202,7 +202,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                  <div className="flex items-center gap-1">
                    <Clock size={14} />
-                   End
+                    {t('event.end')}
                  </div>
                </label>
                <input
@@ -215,7 +215,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Event Type
+              {t('event.type')}
             </label>
             <div className="flex gap-2">
               {eventTypes.map((type) => {
@@ -236,7 +236,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                     }`}
                   >
-                    {type.label}
+                    {t(type.labelKey)}
                   </button>
                 )
               })}
@@ -247,7 +247,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               <div className="flex items-center gap-1">
                 <Palette size={14} />
-                Color
+                {t('event.color')}
               </div>
             </label>
             <div className="flex gap-2">
@@ -260,7 +260,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                     selectedColor === color.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
                   }`}
                   style={{ backgroundColor: color.value }}
-                  title={color.label}
+                  title={t(color.labelKey)}
                 />
               ))}
             </div>
@@ -270,7 +270,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               <div className="flex items-center gap-1">
                 <Bell size={14} />
-                Reminder
+                {t('event.reminder')}
               </div>
             </label>
           <select
@@ -280,8 +280,8 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {reminderOptions.map((option) => (
-                  <option key={option.label} value={option.value ?? ''}>
-                    {option.label}
+                  <option key={option.labelKey} value={option.value ?? ''}>
+                    {t(option.labelKey)}
                   </option>
                 ))}
               </select>
@@ -294,7 +294,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
               className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
               <Repeat size={16} />
-              Add recurrence (coming soon)
+              {t('event.recurrence')}
             </button>
           </div>
 
@@ -303,7 +303,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <div className="flex items-center gap-1">
                   <Link2 size={14} />
-                  Link to Template
+                  {t('event.linkTemplate')}
                 </div>
               </label>
               <select
@@ -312,7 +312,7 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
                 })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Select a template</option>
+                <option value="">{t('event.selectTemplate')}</option>
                 {(checklistsData?.items ?? []).map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
                     {tpl.name || tpl.title}
@@ -328,20 +328,29 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             >
-              Cancel
+              {t('event.cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
             >
-              {event ? 'Update Event' : 'Create Event'}
+              {event ? t('event.update') : t('event.submitCreate')}
             </button>
           </div>
         </form>
       </div>
     </div>
   )
+}
+
+function createEventSchema(t: Translate) {
+  return eventSchemaBase.extend({
+    title: z.string().min(1, t('event.validationTitleRequired')).max(200),
+  }).refine((data) => {
+    if (!data.start_datetime || !data.end_datetime) return true
+    return new Date(data.end_datetime) > new Date(data.start_datetime)
+  }, { message: t('event.validationEndAfterStart'), path: ['end_datetime'] })
 }
 
 export default EventModal

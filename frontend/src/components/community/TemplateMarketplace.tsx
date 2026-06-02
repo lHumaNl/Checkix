@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Search, Grid, List } from 'lucide-react'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { CommunityTemplate } from '@/types'
 import { TemplateCard } from './TemplateCard'
 import { CategoryFilter } from './CategoryFilter'
@@ -14,17 +16,17 @@ interface TemplateMarketplaceProps {
 }
 
 const categories = [
-  { id: 'all', label: 'All', icon: '🌟' },
-  { id: 'travel', label: 'Travel', icon: '✈️' },
-  { id: 'work', label: 'Work', icon: '💼' },
-  { id: 'health', label: 'Health', icon: '💪' },
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'shopping', label: 'Shopping', icon: '🛒' },
-  { id: 'education', label: 'Education', icon: '📚' },
-  { id: 'fitness', label: 'Fitness', icon: '🏋️' },
-  { id: 'finance', label: 'Finance', icon: '💰' },
-  { id: 'productivity', label: 'Productivity', icon: '⚡' },
-]
+  { id: 'all', labelKey: 'community.categoryAll', icon: '🌟' },
+  { id: 'travel', labelKey: 'community.categoryTravel', icon: '✈️' },
+  { id: 'work', labelKey: 'community.categoryWork', icon: '💼' },
+  { id: 'health', labelKey: 'community.categoryHealth', icon: '💪' },
+  { id: 'home', labelKey: 'community.categoryHome', icon: '🏠' },
+  { id: 'shopping', labelKey: 'community.categoryShopping', icon: '🛒' },
+  { id: 'education', labelKey: 'community.categoryEducation', icon: '📚' },
+  { id: 'fitness', labelKey: 'community.categoryFitness', icon: '🏋️' },
+  { id: 'finance', labelKey: 'community.categoryFinance', icon: '💰' },
+  { id: 'productivity', labelKey: 'community.categoryProductivity', icon: '⚡' },
+] as const satisfies Array<{ id: string; labelKey: MessageKey; icon: string }>
 
 export function TemplateMarketplace({
   templates,
@@ -33,6 +35,7 @@ export function TemplateMarketplace({
   onDownload,
   isLoading,
 }: TemplateMarketplaceProps) {
+  const { t } = useI18n()
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -59,7 +62,7 @@ export function TemplateMarketplace({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search templates..."
+              placeholder={t('community.searchTemplates')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -90,7 +93,7 @@ export function TemplateMarketplace({
         </div>
 
         <CategoryFilter
-          categories={categories}
+          categories={categories.map(category => ({ ...category, label: t(category.labelKey) }))}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
@@ -108,7 +111,7 @@ export function TemplateMarketplace({
         </div>
       ) : filteredTemplates.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">No templates found</p>
+          <p className="text-gray-500 dark:text-gray-400">{t('community.noTemplates')}</p>
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sun, Moon, Monitor } from 'lucide-react'
+import { LanguageSelector } from '@/components/LanguageSelector'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
+import { useI18n } from '@/i18n'
 
 export function LoginPage() {
   const [username, setUsername] = useState('')
@@ -12,15 +14,16 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
   const { theme, cycleTheme } = useTheme()
   const { login } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
 
   const validate = (): boolean => {
     const errors: { username?: string; password?: string } = {}
     if (!username.trim()) {
-      errors.username = 'Username is required'
+      errors.username = t('auth.usernameRequired')
     }
     if (!password) {
-      errors.password = 'Password is required'
+      errors.password = t('auth.passwordRequired')
     }
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
@@ -42,9 +45,9 @@ export function LoginPage() {
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { data?: { detail?: string } } }
-        setError(axiosErr.response?.data?.detail || 'Invalid credentials')
+        setError(axiosErr.response?.data?.detail || t('auth.invalidCredentials'))
       } else {
-        setError('Login failed. Please try again.')
+        setError(t('auth.loginFailed'))
       }
     } finally {
       setLoading(false)
@@ -53,23 +56,26 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <button
-        onClick={cycleTheme}
-        className="absolute top-4 right-4 p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-        aria-label={`Theme: ${theme}`}
-        title={`Theme: ${theme}`}
-      >
-        {theme === 'light' && <Sun size={20} />}
-        {theme === 'dark' && <Moon size={20} />}
-        {theme === 'system' && <Monitor size={20} />}
-      </button>
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <LanguageSelector />
+        <button
+          onClick={cycleTheme}
+          className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+          aria-label={`${t('common.theme')}: ${theme}`}
+          title={`${t('common.theme')}: ${theme}`}
+        >
+          {theme === 'light' && <Sun size={20} />}
+          {theme === 'dark' && <Moon size={20} />}
+          {theme === 'system' && <Monitor size={20} />}
+        </button>
+      </div>
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             Checkix
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Sign in to your account
+            {t('auth.signInTitle')}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -81,7 +87,7 @@ export function LoginPage() {
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="username" className="sr-only">
-                Username
+                {t('auth.username')}
               </label>
               <input
                 id="username"
@@ -91,7 +97,7 @@ export function LoginPage() {
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm ${
                   fieldErrors.username ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-700'
                 }`}
-                placeholder="Username"
+                placeholder={t('auth.username')}
                 value={username}
                 onChange={(e) => {
                   setUsername(e.target.value)
@@ -106,7 +112,7 @@ export function LoginPage() {
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -116,7 +122,7 @@ export function LoginPage() {
                 className={`appearance-none rounded-none relative block w-full px-3 py-2 border placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm ${
                   fieldErrors.password ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-700'
                 }`}
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
@@ -143,7 +149,7 @@ export function LoginPage() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
-                'Sign in'
+                t('auth.signIn')
               )}
             </button>
           </div>

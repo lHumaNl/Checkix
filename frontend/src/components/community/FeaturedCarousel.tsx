@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Download, Star } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import type { CommunityTemplate } from '@/types'
 
 interface FeaturedCarouselProps {
@@ -8,6 +9,7 @@ interface FeaturedCarouselProps {
 }
 
 export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouselProps) {
+  const { t } = useI18n()
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -56,12 +58,12 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
         <div className="flex-1">
           <div className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-white text-xs font-medium mb-3">
             <Star size={12} fill="currentColor" />
-            Featured Template
+            {t('community.featuredTemplate')}
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">{current.title}</h2>
           <p className="text-white/80 mb-4 line-clamp-2">{current.description}</p>
           <div className="flex items-center gap-4 mb-4">
-            <span className="text-white/80 text-sm">by {current.author.username}</span>
+            <span className="text-white/80 text-sm">{t('community.byAuthor', { author: current.author.username })}</span>
             <span className="flex items-center gap-1 text-white/80 text-sm">
               <Star size={14} fill="currentColor" />
               {current.rating.toFixed(1)}
@@ -75,7 +77,7 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
             onClick={() => onTemplateClick(current)}
             className="px-4 py-2 bg-white text-blue-600 rounded-md font-medium hover:bg-blue-50 transition-colors"
           >
-            View Template
+            {t('community.viewTemplate')}
           </button>
         </div>
 
@@ -92,7 +94,7 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
               ))}
               {current.items.length > 5 && (
                 <div className="text-white/60 text-xs">
-                  +{current.items.length - 5} more items
+                  {t('community.moreItems', { count: current.items.length - 5 })}
                 </div>
               )}
             </div>
@@ -104,14 +106,14 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
         <>
           <button
             onClick={handlePrev}
-            aria-label="Previous template"
+            aria-label={t('community.previousTemplate')}
             className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
           >
             <ChevronLeft size={24} />
           </button>
           <button
             onClick={handleNext}
-            aria-label="Next template"
+            aria-label={t('community.nextTemplate')}
             className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
           >
             <ChevronRight size={24} />
@@ -119,7 +121,7 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
         </>
       )}
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2" role="tablist" aria-label="Template navigation">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2" role="tablist" aria-label={t('community.templateNavigation')}>
         {templates.map((_, i) => (
           <button
             key={i}
@@ -127,7 +129,7 @@ export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouse
               setIsAutoPlaying(false)
               setCurrentIndex(i)
             }}
-            aria-label={`Go to template ${i + 1}`}
+            aria-label={t('community.goToTemplate', { number: i + 1 })}
             aria-selected={i === currentIndex}
             role="tab"
             className={`w-2 h-2 rounded-full transition-colors ${

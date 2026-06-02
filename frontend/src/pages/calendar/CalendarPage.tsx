@@ -5,8 +5,10 @@ import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent } fro
 import { CalendarSkeleton } from '@/components/skeletons/CalendarSkeleton'
 import { toast } from '@/hooks/useToast'
 import type { CalendarEvent, CalendarEventCreate } from '@/types'
+import { useI18n } from '@/i18n'
 
 export function CalendarPage() {
+  const { t } = useI18n()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -46,14 +48,14 @@ export function CalendarPage() {
       }
       if (selectedEvent) {
         await updateMutation.mutateAsync({ id: selectedEvent.id, ...payload })
-        toast({ title: 'Event updated' })
+        toast({ title: t('event.updated') })
       } else {
         await createMutation.mutateAsync(payload)
-        toast({ title: 'Event created' })
+        toast({ title: t('event.created') })
       }
       setSelectedEvent(null)
     },
-    [selectedEvent, createMutation, updateMutation]
+    [selectedEvent, createMutation, updateMutation, t]
   )
 
   const handleCloseModal = useCallback(() => {
@@ -71,7 +73,7 @@ export function CalendarPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-4">
+    <div className="h-[calc(100vh-8rem)] flex flex-col gap-4 lg:flex-row" aria-label={t('calendar.title')}>
       <div className="lg:w-64 shrink-0 space-y-4">
         <MiniCalendar
           events={events}

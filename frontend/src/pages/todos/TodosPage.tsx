@@ -12,13 +12,15 @@ import {
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import type { TodoList, TodoItem } from '@/api/useTodos'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 // ─── Priority helpers ───────────────────────────────────────────────────────
 
-const PRIORITY_LABELS: Record<TodoList['priority'], string> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
+const PRIORITY_LABEL_KEYS: Record<TodoList['priority'], MessageKey> = {
+  low: 'priority.low',
+  medium: 'priority.medium',
+  high: 'priority.high',
 }
 
 const PRIORITY_CLASSES: Record<TodoList['priority'], string> = {
@@ -27,11 +29,11 @@ const PRIORITY_CLASSES: Record<TodoList['priority'], string> = {
   high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const STATUS_LABELS: Record<TodoList['status'], string> = {
-  active: 'Active',
-  paused: 'Paused',
-  completed: 'Completed',
-  cancelled: 'Cancelled',
+const STATUS_LABEL_KEYS: Record<TodoList['status'], MessageKey> = {
+  active: 'status.active',
+  paused: 'status.paused',
+  completed: 'status.completed',
+  cancelled: 'status.cancelled',
 }
 
 const STATUS_CLASSES: Record<TodoList['status'], string> = {
@@ -71,16 +73,18 @@ function TodoListSkeleton() {
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
 function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+  const { t } = useI18n()
+
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <CheckSquare className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-        {hasSearch ? 'No lists match your search' : 'No todo lists yet'}
+        {hasSearch ? t('todos.noSearchMatch') : t('todos.noLists')}
       </h3>
       <p className="text-sm text-gray-500 dark:text-gray-400">
         {hasSearch
-          ? 'Try adjusting your search term.'
-          : 'Create your first todo list to get started.'}
+          ? t('todos.adjustSearch')
+          : t('todos.createFirst')}
       </p>
     </div>
   )
@@ -95,6 +99,7 @@ interface NewListFormProps {
 }
 
 function NewListForm({ onCancel, onSubmit, isLoading }: NewListFormProps) {
+  const { t } = useI18n()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState<TodoList['priority']>('medium')
@@ -110,32 +115,32 @@ function NewListForm({ onCancel, onSubmit, isLoading }: NewListFormProps) {
       onSubmit={handleSubmit}
       className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-5 space-y-3"
     >
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">New Todo List</h3>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('todos.newTodoList')}</h3>
       <input
         autoFocus
         type="text"
-        placeholder="List name"
+        placeholder={t('todos.listName')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <input
         type="text"
-        placeholder="Description (optional)"
+        placeholder={t('todos.descriptionOptional')}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-600 dark:text-gray-400">Priority:</label>
+        <label className="text-sm text-gray-600 dark:text-gray-400">{t('todos.priority')}</label>
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as TodoList['priority'])}
           className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+          <option value="low">{t('priority.low')}</option>
+          <option value="medium">{t('priority.medium')}</option>
+          <option value="high">{t('priority.high')}</option>
         </select>
       </div>
       <div className="flex gap-2 justify-end">
@@ -144,14 +149,14 @@ function NewListForm({ onCancel, onSubmit, isLoading }: NewListFormProps) {
           onClick={onCancel}
           className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!name.trim() || isLoading}
           className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white transition-colors"
         >
-          {isLoading ? 'Creating...' : 'Create'}
+          {isLoading ? t('common.creating') : t('common.create')}
         </button>
       </div>
     </form>
@@ -168,6 +173,7 @@ interface EditListFormProps {
 }
 
 function EditListForm({ list, onCancel, onSubmit, isLoading }: EditListFormProps) {
+  const { t } = useI18n()
   const [name, setName] = useState(list.name)
   const [description, setDescription] = useState(list.description ?? '')
   const [priority, setPriority] = useState<TodoList['priority']>(list.priority)
@@ -192,21 +198,21 @@ function EditListForm({ list, onCancel, onSubmit, isLoading }: EditListFormProps
       />
       <input
         type="text"
-        placeholder="Description (optional)"
+        placeholder={t('todos.descriptionOptional')}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-600 dark:text-gray-400">Priority:</label>
+        <label className="text-sm text-gray-600 dark:text-gray-400">{t('todos.priority')}</label>
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value as TodoList['priority'])}
           className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+          <option value="low">{t('priority.low')}</option>
+          <option value="medium">{t('priority.medium')}</option>
+          <option value="high">{t('priority.high')}</option>
         </select>
       </div>
       <div className="flex gap-2 justify-end">
@@ -215,14 +221,14 @@ function EditListForm({ list, onCancel, onSubmit, isLoading }: EditListFormProps
           onClick={onCancel}
           className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={!name.trim() || isLoading}
           className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-3 py-1.5 text-sm font-medium text-white transition-colors"
         >
-          {isLoading ? 'Saving...' : 'Save'}
+          {isLoading ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>
@@ -237,6 +243,7 @@ interface TodoItemRowProps {
 }
 
 function TodoItemRow({ item, listId }: TodoItemRowProps) {
+  const { t } = useI18n()
   const updateItem = useUpdateTodoItem()
   const deleteItem = useDeleteTodoItem()
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -247,7 +254,7 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
       { listId, itemId: item.id, data: { status: newStatus } },
       {
         onError: () => {
-          toast({ title: 'Failed to update item', variant: 'destructive' })
+          toast({ title: t('todos.itemUpdatedFailed'), variant: 'destructive' })
         },
       }
     )
@@ -258,10 +265,10 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
       { listId, itemId: item.id },
       {
         onSuccess: () => {
-          toast({ title: 'Item deleted', variant: 'default' })
+          toast({ title: t('todos.itemDeleted'), variant: 'default' })
         },
         onError: () => {
-          toast({ title: 'Failed to delete item', variant: 'destructive' })
+          toast({ title: t('todos.itemDeleteFailed'), variant: 'destructive' })
         },
       }
     )
@@ -276,7 +283,7 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
           onClick={handleToggle}
           disabled={updateItem.isPending}
           className="shrink-0 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors disabled:opacity-50"
-          aria-label={isDone ? 'Mark as todo' : 'Mark as done'}
+          aria-label={isDone ? t('todos.markTodo') : t('todos.markDone')}
         >
           {isDone ? (
             <CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -298,13 +305,13 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[item.priority]}`}
         >
-          {PRIORITY_LABELS[item.priority]}
+          {t(PRIORITY_LABEL_KEYS[item.priority])}
         </span>
 
         <button
           onClick={() => setConfirmOpen(true)}
           className="shrink-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
-          aria-label="Delete item"
+          aria-label={t('todos.deleteItem')}
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -313,9 +320,9 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Delete item?"
-        description={`"${item.title}" will be permanently removed.`}
-        confirmLabel="Delete"
+        title={t('todos.deleteItemTitle')}
+        description={t('todos.deleteItemConfirm', { title: item.title })}
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={handleDelete}
       />
@@ -330,6 +337,7 @@ interface AddItemInputProps {
 }
 
 function AddItemInput({ listId }: AddItemInputProps) {
+  const { t } = useI18n()
   const [value, setValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const createItem = useCreateTodoItem()
@@ -343,10 +351,10 @@ function AddItemInput({ listId }: AddItemInputProps) {
         onSuccess: () => {
           setValue('')
           inputRef.current?.focus()
-          toast({ title: 'Item added', variant: 'default' })
+          toast({ title: t('todos.itemAdded'), variant: 'default' })
         },
         onError: () => {
-          toast({ title: 'Failed to add item', variant: 'destructive' })
+          toast({ title: t('todos.itemAddFailed'), variant: 'destructive' })
         },
       }
     )
@@ -357,7 +365,7 @@ function AddItemInput({ listId }: AddItemInputProps) {
       <input
         ref={inputRef}
         type="text"
-        placeholder="Add a new item..."
+        placeholder={t('todos.addItem')}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -380,6 +388,7 @@ interface TodoListCardProps {
 }
 
 function TodoListCard({ list }: TodoListCardProps) {
+  const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -393,10 +402,10 @@ function TodoListCard({ list }: TodoListCardProps) {
       {
         onSuccess: () => {
           setEditing(false)
-          toast({ title: 'List updated', variant: 'default' })
+          toast({ title: t('todos.listUpdated'), variant: 'default' })
         },
         onError: () => {
-          toast({ title: 'Failed to update list', variant: 'destructive' })
+          toast({ title: t('todos.listUpdateFailed'), variant: 'destructive' })
         },
       }
     )
@@ -405,10 +414,10 @@ function TodoListCard({ list }: TodoListCardProps) {
   const handleDelete = () => {
     deleteList.mutate(list.id, {
       onSuccess: () => {
-        toast({ title: 'List deleted', variant: 'default' })
+        toast({ title: t('todos.listDeleted'), variant: 'default' })
       },
       onError: () => {
-        toast({ title: 'Failed to delete list', variant: 'destructive' })
+        toast({ title: t('todos.listDeleteFailed'), variant: 'destructive' })
       },
     })
   }
@@ -427,7 +436,7 @@ function TodoListCard({ list }: TodoListCardProps) {
           <button
             onClick={() => setExpanded((prev) => !prev)}
             className="mt-0.5 shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            aria-label={expanded ? 'Collapse list' : 'Expand list'}
+            aria-label={expanded ? t('todos.collapseList') : t('todos.expandList')}
           >
             {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
           </button>
@@ -440,10 +449,10 @@ function TodoListCard({ list }: TodoListCardProps) {
                 {list.name}
               </h3>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[list.priority]}`}>
-                {PRIORITY_LABELS[list.priority]}
+                {t(PRIORITY_LABEL_KEYS[list.priority])}
               </span>
               <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[list.status]}`}>
-                {STATUS_LABELS[list.status]}
+                {t(STATUS_LABEL_KEYS[list.status])}
               </span>
             </div>
 
@@ -470,14 +479,14 @@ function TodoListCard({ list }: TodoListCardProps) {
             <button
               onClick={() => { setEditing((prev) => !prev); setExpanded(false) }}
               className="rounded-lg p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-              aria-label="Edit list"
+              aria-label={t('todos.editList')}
             >
               <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => setConfirmOpen(true)}
               className="rounded-lg p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              aria-label="Delete list"
+              aria-label={t('todos.deleteList')}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -498,7 +507,7 @@ function TodoListCard({ list }: TodoListCardProps) {
         {expanded && !editing && (
           <div className="mt-4 pl-8">
             {items.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-gray-500 py-2">No items yet. Add one below.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-2">{t('todos.noItems')}</p>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
                 {items.map((item) => (
@@ -514,9 +523,9 @@ function TodoListCard({ list }: TodoListCardProps) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Delete list?"
-        description={`"${list.name}" and all its items will be permanently removed.`}
-        confirmLabel="Delete"
+        title={t('todos.deleteListTitle')}
+        description={t('todos.deleteListConfirm', { title: list.name })}
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={handleDelete}
       />
@@ -527,6 +536,7 @@ function TodoListCard({ list }: TodoListCardProps) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export function TodosPage() {
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [showNewForm, setShowNewForm] = useState(false)
@@ -542,10 +552,10 @@ export function TodosPage() {
       {
         onSuccess: () => {
           setShowNewForm(false)
-          toast({ title: 'List created', variant: 'default' })
+          toast({ title: t('todos.listCreated'), variant: 'default' })
         },
         onError: () => {
-          toast({ title: 'Failed to create list', variant: 'destructive' })
+          toast({ title: t('todos.listCreateFailed'), variant: 'destructive' })
         },
       }
     )
@@ -556,15 +566,15 @@ export function TodosPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Todos</h1>
-          <p className="text-gray-600 dark:text-gray-400">Manage your todo lists and tasks</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('todos.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">{t('todos.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowNewForm((prev) => !prev)}
           className="flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors"
         >
           <Plus className="h-4 w-4" />
-          New List
+          {t('todos.newList')}
         </button>
       </div>
 
@@ -583,7 +593,7 @@ export function TodosPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search lists..."
+            placeholder={t('todos.searchLists')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -594,11 +604,11 @@ export function TodosPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">All statuses</option>
-          <option value="active">Active</option>
-          <option value="paused">Paused</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="">{t('common.allStatuses')}</option>
+          <option value="active">{t('status.active')}</option>
+          <option value="paused">{t('status.paused')}</option>
+          <option value="completed">{t('status.completed')}</option>
+          <option value="cancelled">{t('status.cancelled')}</option>
         </select>
       </div>
 

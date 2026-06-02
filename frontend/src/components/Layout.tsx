@@ -26,6 +26,9 @@ import { useSearch } from '@/api/useSearch'
 import { useTheme } from '@/hooks/useTheme'
 import { useAuth } from '@/contexts/AuthContext'
 import { Avatar } from '@/components/ui/Avatar'
+import { LanguageSelector } from '@/components/LanguageSelector'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -40,18 +43,18 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/checklists', label: 'Checklists', icon: CheckSquare },
-  { to: '/todos', label: 'Todos', icon: ListTodo },
-  { to: '/calendar', label: 'Calendar', icon: Calendar },
-  { to: '/community', label: 'Community', icon: Users },
-  { to: '/assignments', label: 'Assignments', icon: UserCheck },
-  { to: '/run-links', label: 'Run Links', icon: Link2 },
-  { to: '/webhooks', label: 'Webhooks', icon: Webhook },
-  { to: '/notifications', label: 'Notifications', icon: Bell },
-  { to: '/stats', label: 'Statistics', icon: BarChart3 },
-  { to: '/profile', label: 'Profile', icon: UserCircle },
-]
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/checklists', labelKey: 'nav.checklists', icon: CheckSquare },
+  { to: '/todos', labelKey: 'nav.todos', icon: ListTodo },
+  { to: '/calendar', labelKey: 'nav.calendar', icon: Calendar },
+  { to: '/community', labelKey: 'nav.community', icon: Users },
+  { to: '/assignments', labelKey: 'nav.assignments', icon: UserCheck },
+  { to: '/run-links', labelKey: 'nav.runLinks', icon: Link2 },
+  { to: '/webhooks', labelKey: 'nav.webhooks', icon: Webhook },
+  { to: '/notifications', labelKey: 'nav.notifications', icon: Bell },
+  { to: '/stats', labelKey: 'nav.stats', icon: BarChart3 },
+  { to: '/profile', labelKey: 'nav.profile', icon: UserCircle },
+] satisfies Array<{ to: string; labelKey: MessageKey; icon: typeof LayoutDashboard }>
 
 function SearchBar() {
   const [query, setQuery] = useState('')
@@ -60,6 +63,7 @@ function SearchBar() {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const { t } = useI18n()
   const { data: results } = useSearch(query)
 
   const hasResults = results && (
@@ -68,14 +72,6 @@ function SearchBar() {
     (results.folders?.length ?? 0) +
     (results.tags?.length ?? 0)
   ) > 0
-
-  useEffect(() => {
-    if (query.trim().length >= 2) {
-      setOpen(true)
-    } else {
-      setOpen(false)
-    }
-  }, [query])
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -109,8 +105,12 @@ function SearchBar() {
             ref={inputRef}
             type="text"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search…"
+            onChange={(event) => {
+              const nextQuery = event.target.value
+              setQuery(nextQuery)
+              setOpen(nextQuery.trim().length >= 2)
+            }}
+            placeholder={t('common.search')}
             className="w-48 sm:w-64 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -124,7 +124,7 @@ function SearchBar() {
         <button
           onClick={showInput}
           className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-          aria-label="Search"
+          aria-label={t('common.search')}
         >
           <Search size={20} />
         </button>
@@ -133,13 +133,13 @@ function SearchBar() {
       {open && (
         <div className="absolute top-full right-0 mt-1 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
           {!hasResults ? (
-            <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No results found</p>
+            <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{t('common.noResults')}</p>
           ) : (
             <div className="max-h-80 overflow-y-auto">
               {(results?.checklists?.length ?? 0) > 0 && (
                 <div>
                   <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 uppercase tracking-wide">
-                    Checklists
+                    {t('search.checklists')}
                   </div>
                   {results!.checklists.map(c => (
                     <button
@@ -160,7 +160,7 @@ function SearchBar() {
               {(results?.todos?.length ?? 0) > 0 && (
                 <div>
                   <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 uppercase tracking-wide">
-                    Todos
+                    {t('search.todos')}
                   </div>
                   {results!.todos.map(t => (
                     <button
@@ -177,7 +177,7 @@ function SearchBar() {
               {(results?.folders?.length ?? 0) > 0 && (
                 <div>
                   <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 uppercase tracking-wide">
-                    Folders
+                    {t('search.folders')}
                   </div>
                   {results!.folders.map(f => (
                     <button
@@ -193,7 +193,7 @@ function SearchBar() {
               {(results?.tags?.length ?? 0) > 0 && (
                 <div>
                   <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 uppercase tracking-wide">
-                    Tags
+                    {t('search.tags')}
                   </div>
                   {results!.tags.map(t => (
                     <button
@@ -217,6 +217,7 @@ function SearchBar() {
 function UserDropdown() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   const displayName = user?.full_name || user?.username || 'User'
   const initials = displayName
@@ -231,7 +232,7 @@ function UserDropdown() {
       <DropdownMenuTrigger asChild>
         <button
           className="flex items-center gap-2 rounded-full p-0.5 hover:ring-2 hover:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="User menu"
+          aria-label={t('common.userMenu')}
         >
           <Avatar
             size="sm"
@@ -253,12 +254,12 @@ function UserDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/profile')}>
           <UserCircle size={16} />
-          Profile
+          {t('common.profile')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>
           <LogOut size={16} />
-          Logout
+          {t('common.logout')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -270,6 +271,7 @@ const MOBILE_BREAKPOINT = 1024 // matches Tailwind's lg breakpoint
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, cycleTheme } = useTheme()
+  const { t } = useI18n()
   const location = useLocation()
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -285,11 +287,6 @@ export function Layout({ children }: LayoutProps) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  // Close sidebar on route change (mobile UX)
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [location.pathname])
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -326,7 +323,7 @@ export function Layout({ children }: LayoutProps) {
           <button
             onClick={closeSidebar}
             className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            aria-label="Close sidebar"
+            aria-label={t('common.closeSidebar')}
           >
             <X size={20} />
           </button>
@@ -347,7 +344,7 @@ export function Layout({ children }: LayoutProps) {
                 }`}
               >
                 <Icon size={20} />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             )
           })}
@@ -359,7 +356,7 @@ export function Layout({ children }: LayoutProps) {
           <button
             onClick={openSidebar}
             className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            aria-label="Open sidebar"
+            aria-label={t('common.openSidebar')}
           >
             <Menu size={20} />
           </button>
@@ -367,12 +364,13 @@ export function Layout({ children }: LayoutProps) {
           <div className="lg:flex-1" />
 
           <SearchBar />
+          <LanguageSelector />
 
           <button
             onClick={cycleTheme}
             className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label={`Theme: ${theme}`}
-            title={`Theme: ${theme}`}
+            aria-label={`${t('common.theme')}: ${theme}`}
+            title={`${t('common.theme')}: ${theme}`}
           >
             {theme === 'light' && <Sun size={20} />}
             {theme === 'dark' && <Moon size={20} />}

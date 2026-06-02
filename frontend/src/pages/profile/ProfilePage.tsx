@@ -3,6 +3,7 @@ import { User, Mail, Building2, IdCard, Globe, Save, Clock } from 'lucide-react'
 import { useProfile, useUpdateProfile } from '@/api/useProfile'
 import type { UserMeUpdate } from '@/api/useProfile'
 import { toast } from '@/hooks/useToast'
+import { useI18n } from '@/i18n'
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ const readonlyInputClass =
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function ProfilePage() {
+  const { language, t } = useI18n()
   const { data: profile, isLoading, isError } = useProfile()
   const updateProfile = useUpdateProfile()
 
@@ -124,9 +126,9 @@ export function ProfilePage() {
 
     try {
       await updateProfile.mutateAsync(payload)
-      toast({ title: 'Profile updated successfully.', variant: 'default' })
+      toast({ title: t('profile.updated'), variant: 'default' })
     } catch {
-      toast({ title: 'Failed to update profile. Please try again.', variant: 'destructive' })
+      toast({ title: t('profile.updateFailed'), variant: 'destructive' })
     }
   }
 
@@ -136,8 +138,8 @@ export function ProfilePage() {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-          <p className="text-red-700 dark:text-red-400 font-medium">Failed to load profile.</p>
-          <p className="text-red-500 dark:text-red-500 text-sm mt-1">Please refresh the page and try again.</p>
+          <p className="text-red-700 dark:text-red-400 font-medium">{t('profile.updateFailed')}</p>
+          <p className="text-red-500 dark:text-red-500 text-sm mt-1">{t('common.failedRefresh')}</p>
         </div>
       </div>
     )
@@ -147,20 +149,20 @@ export function ProfilePage() {
 
   const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username
   const memberSince = profile.date_joined
-    ? new Date(profile.date_joined).toLocaleDateString('en-US', {
+    ? new Date(profile.date_joined).toLocaleDateString(language, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
-    : 'N/A'
+    : t('common.notAvailable')
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('profile.title')}</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Manage your personal information and account settings.
+          {t('profile.subtitle')}
         </p>
       </div>
 
@@ -177,7 +179,7 @@ export function ProfilePage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">@{profile.username}</p>
             <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-400 dark:text-gray-500">
               <Clock size={12} />
-              <span>Member since {memberSince}</span>
+              <span>{t('profile.memberSince', { date: memberSince })}</span>
             </div>
             {profile.profile?.department && (
               <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 dark:text-blue-400">
@@ -194,69 +196,69 @@ export function ProfilePage() {
         onSubmit={handleSubmit}
         className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-5"
       >
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.personalInfo')}</h3>
 
         {/* Name row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="First Name" icon={User}>
+          <Field label={t('profile.firstName')} icon={User}>
             <input
               type="text"
               name="first_name"
               value={formValues.first_name}
               onChange={handleChange}
-              placeholder="First name"
+              placeholder={t('profile.firstName')}
               className={inputClass}
             />
           </Field>
-          <Field label="Last Name" icon={User}>
+          <Field label={t('profile.lastName')} icon={User}>
             <input
               type="text"
               name="last_name"
               value={formValues.last_name}
               onChange={handleChange}
-              placeholder="Last name"
+              placeholder={t('profile.lastName')}
               className={inputClass}
             />
           </Field>
         </div>
 
         {/* Email (readonly) */}
-        <Field label="Email" icon={Mail}>
+        <Field label={t('profile.email')} icon={Mail}>
           <input
             type="email"
             value={profile.email}
             readOnly
             className={readonlyInputClass}
-            title="Email cannot be changed here"
+            title={t('profile.emailLocked')}
           />
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Contact your administrator to update your email address.
+            {t('profile.contactAdminEmail')}
           </p>
         </Field>
 
         <hr className="border-gray-100 dark:border-gray-700" />
 
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Work Details</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.workDetails')}</h3>
 
         {/* Department & Employee ID */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Department" icon={Building2}>
+          <Field label={t('profile.department')} icon={Building2}>
             <input
               type="text"
               name="department"
               value={formValues.department}
               onChange={handleChange}
-              placeholder="e.g. Engineering"
+              placeholder={t('profile.departmentPlaceholder')}
               className={inputClass}
             />
           </Field>
-          <Field label="Employee ID" icon={IdCard}>
+          <Field label={t('profile.employeeId')} icon={IdCard}>
             <input
               type="text"
               name="employee_id"
               value={formValues.employee_id}
               onChange={handleChange}
-              placeholder="e.g. EMP-1234"
+              placeholder={t('profile.employeeIdPlaceholder')}
               className={inputClass}
             />
           </Field>
@@ -264,27 +266,27 @@ export function ProfilePage() {
 
         <hr className="border-gray-100 dark:border-gray-700" />
 
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Locale Settings</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.localeSettings')}</h3>
 
         {/* Timezone & Language */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Timezone" icon={Globe}>
+          <Field label={t('profile.timezone')} icon={Globe}>
             <input
               type="text"
               name="timezone"
               value={formValues.timezone}
               onChange={handleChange}
-              placeholder="e.g. America/New_York"
+              placeholder={t('profile.timezonePlaceholder')}
               className={inputClass}
             />
           </Field>
-          <Field label="Language" icon={Globe}>
+          <Field label={t('common.language')} icon={Globe}>
             <input
               type="text"
               name="language"
               value={formValues.language}
               onChange={handleChange}
-              placeholder="e.g. en"
+              placeholder={t('profile.languagePlaceholder')}
               className={inputClass}
             />
           </Field>
@@ -298,21 +300,21 @@ export function ProfilePage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
           >
             <Save size={16} />
-            {updateProfile.isPending ? 'Saving…' : 'Save Changes'}
+            {updateProfile.isPending ? t('common.saving') : t('common.saveChanges')}
           </button>
         </div>
       </form>
 
       {/* Read-only account info */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-3">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">Account Information</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.accountInfo')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Username</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('profile.username')}</span>
             <p className="text-gray-900 dark:text-white font-medium mt-0.5">@{profile.username}</p>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Account status</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('profile.accountStatus')}</span>
             <p className="mt-0.5">
               <span
                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -321,19 +323,19 @@ export function ProfilePage() {
                     : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                 }`}
               >
-                {profile.is_active ? 'Active' : 'Inactive'}
+                {profile.is_active ? t('common.active') : t('common.inactive')}
               </span>
             </p>
           </div>
           <div>
-            <span className="text-gray-500 dark:text-gray-400">Member since</span>
+            <span className="text-gray-500 dark:text-gray-400">{t('profile.memberSince', { date: '' }).trim()}</span>
             <p className="text-gray-900 dark:text-white font-medium mt-0.5">{memberSince}</p>
           </div>
           {profile.last_login && (
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Last login</span>
+              <span className="text-gray-500 dark:text-gray-400">{t('profile.lastLogin')}</span>
               <p className="text-gray-900 dark:text-white font-medium mt-0.5">
-                {new Date(profile.last_login).toLocaleDateString('en-US', {
+                {new Date(profile.last_login).toLocaleDateString(language, {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',

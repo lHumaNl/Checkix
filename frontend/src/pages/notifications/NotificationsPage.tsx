@@ -21,17 +21,26 @@ import {
   useNotificationLogs,
 } from '@/api/useNotifications'
 import type { NotificationRule, NotificationSequence } from '@/api/useNotifications'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const EVENT_TYPE_OPTIONS = [
-  { value: 'task_due_in', label: 'Task Due In' },
-  { value: 'task_overdue_by', label: 'Task Overdue' },
-  { value: 'task_completed', label: 'Task Completed' },
-  { value: 'task_status_changed', label: 'Status Changed' },
-  { value: 'checklist_completed', label: 'Checklist Completed' },
-  { value: 'task_assigned', label: 'Task Assigned' },
+  { value: 'task_due_in', labelKey: 'notifications.eventTaskDueIn' },
+  { value: 'task_overdue_by', labelKey: 'notifications.eventTaskOverdue' },
+  { value: 'task_completed', labelKey: 'notifications.eventTaskCompleted' },
+  { value: 'task_status_changed', labelKey: 'notifications.eventStatusChanged' },
+  { value: 'checklist_completed', labelKey: 'notifications.eventChecklistCompleted' },
+  { value: 'task_assigned', labelKey: 'notifications.eventTaskAssigned' },
 ] as const
+
+type NotificationEventType = (typeof EVENT_TYPE_OPTIONS)[number]['value']
+
+const EVENT_TYPE_LABEL_KEYS = EVENT_TYPE_OPTIONS.reduce(
+  (labels, option) => ({ ...labels, [option.value]: option.labelKey }),
+  {} as Record<NotificationEventType, MessageKey>
+)
 
 const EVENT_TYPE_BADGE_COLORS: Record<string, string> = {
   task_due_in: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -52,8 +61,8 @@ function formatDate(iso: string | null): string {
   })
 }
 
-function offsetLabel(minutes: number): string {
-  if (minutes === 0) return 'immediately'
+function offsetLabel(minutes: number, immediateLabel: string): string {
+  if (minutes === 0) return immediateLabel
   const abs = Math.abs(minutes)
   const h = Math.floor(abs / 60)
   const m = abs % 60
@@ -75,11 +84,12 @@ function EventTypeBadge({ eventType, label }: { eventType: string; label: string
 }
 
 function StatusBadge({ status }: { status: 'pending' | 'sent' | 'failed' }) {
+  const { t } = useI18n()
   if (status === 'sent') {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-300">
         <CheckCircle className="h-3 w-3" />
-        Sent
+        {t('status.sent')}
       </span>
     )
   }
@@ -87,31 +97,32 @@ function StatusBadge({ status }: { status: 'pending' | 'sent' | 'failed' }) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900/30 dark:text-red-300">
         <XCircle className="h-3 w-3" />
-        Failed
+        {t('status.failed')}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
       <Clock className="h-3 w-3" />
-      Pending
+      {t('status.pending')}
     </span>
   )
 }
 
 function SequenceRow({ seq }: { seq: NotificationSequence }) {
+  const { t } = useI18n()
   const recipientLabel =
     seq.recipient_type === 'group'
-      ? seq.recipient_group_name ?? `Group #${seq.recipient_group}`
+      ? seq.recipient_group_name ?? t('notifications.groupFallback', { id: seq.recipient_group ?? '—' })
       : seq.recipient_type === 'custom'
-      ? seq.custom_email || 'Custom email'
-      : 'Assignee'
+      ? seq.custom_email || t('notifications.customEmail')
+      : t('notifications.assignee')
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md bg-gray-50 px-3 py-2 text-sm dark:bg-gray-800/50">
       <span className="font-medium text-gray-500 dark:text-gray-400">#{seq.sequence_order}</span>
       <span className="text-gray-700 dark:text-gray-300">
-        Offset: <span className="font-mono">{offsetLabel(seq.trigger_offset_minutes)}</span>
+        {t('notifications.offset')}: <span className="font-mono">{offsetLabel(seq.trigger_offset_minutes, t('notifications.immediately'))}</span>
       </span>
       <span className="flex items-center gap-1 text-gray-700 dark:text-gray-300">
         <Mail className="h-3.5 w-3.5 text-gray-400" />
@@ -133,6 +144,7 @@ interface NewRuleFormProps {
 }
 
 function NewRuleForm({ onClose }: NewRuleFormProps) {
+  const { t } = useI18n()
   const [eventType, setEventType] = useState<string>('task_due_in')
   const [templateId, setTemplateId] = useState<string>('')
   const [isActive, setIsActive] = useState(true)
@@ -151,11 +163,11 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
     }
     createMutation.mutate(payload, {
       onSuccess: () => {
-        toast({ title: 'Notification rule created', variant: 'default' })
+        toast({ title: t('notifications.ruleCreated'), variant: 'default' })
         onClose()
       },
       onError: () => {
-        toast({ title: 'Failed to create rule', variant: 'destructive' })
+        toast({ title: t('notifications.ruleCreateFailed'), variant: 'destructive' })
       },
     })
   }
@@ -165,13 +177,13 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
       onSubmit={handleSubmit}
       className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-4"
     >
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">New Notification Rule</h3>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('notifications.newRuleTitle')}</h3>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Event type */}
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-            Event Type <span className="text-red-500">*</span>
+            {t('notifications.eventType')} <span className="text-red-500">*</span>
           </label>
           <select
             value={eventType}
@@ -180,7 +192,7 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
           >
             {EVENT_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {t(opt.labelKey)}
               </option>
             ))}
           </select>
@@ -189,14 +201,14 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
         {/* Template ID */}
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-            Checklist Template ID <span className="text-gray-400">(optional)</span>
+            {t('notifications.templateId')} <span className="text-gray-400">({t('common.optional')})</span>
           </label>
           <input
             type="number"
             min={1}
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
-            placeholder="Leave blank for all templates"
+            placeholder={t('notifications.templatePlaceholder')}
             className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           />
         </div>
@@ -210,7 +222,7 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
               onChange={(e) => setIsActive(e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            Active
+            {t('common.active')}
           </label>
         </div>
       </div>
@@ -221,14 +233,14 @@ function NewRuleForm({ onClose }: NewRuleFormProps) {
           onClick={onClose}
           className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={createMutation.isPending}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
-          {createMutation.isPending ? 'Creating...' : 'Create Rule'}
+          {createMutation.isPending ? t('common.creating') : t('notifications.createRule')}
         </button>
       </div>
     </form>
@@ -242,6 +254,7 @@ interface RuleCardProps {
 }
 
 function RuleCard({ rule }: RuleCardProps) {
+  const { t } = useI18n()
   const [expanded, setExpanded] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
@@ -252,12 +265,12 @@ function RuleCard({ rule }: RuleCardProps) {
     toggleMutation.mutate(rule.id, {
       onSuccess: (updated) => {
         toast({
-          title: updated.is_active ? 'Rule activated' : 'Rule deactivated',
+          title: updated.is_active ? t('notifications.ruleActivated') : t('notifications.ruleDeactivated'),
           variant: 'default',
         })
       },
       onError: () => {
-        toast({ title: 'Failed to update rule', variant: 'destructive' })
+        toast({ title: t('notifications.ruleUpdateFailed'), variant: 'destructive' })
       },
     })
   }
@@ -265,10 +278,10 @@ function RuleCard({ rule }: RuleCardProps) {
   const handleDelete = () => {
     deleteMutation.mutate(rule.id, {
       onSuccess: () => {
-        toast({ title: 'Rule deleted', variant: 'default' })
+        toast({ title: t('notifications.ruleDeleted'), variant: 'default' })
       },
       onError: () => {
-        toast({ title: 'Failed to delete rule', variant: 'destructive' })
+        toast({ title: t('notifications.ruleDeleteFailed'), variant: 'destructive' })
       },
     })
   }
@@ -281,25 +294,28 @@ function RuleCard({ rule }: RuleCardProps) {
         {/* Card header */}
         <div className="flex flex-wrap items-center gap-3 px-4 py-3">
           {/* Event type badge */}
-          <EventTypeBadge eventType={rule.event_type} label={rule.event_type_display} />
+          <EventTypeBadge
+            eventType={rule.event_type}
+            label={EVENT_TYPE_LABEL_KEYS[rule.event_type as NotificationEventType] ? t(EVENT_TYPE_LABEL_KEYS[rule.event_type as NotificationEventType]) : rule.event_type_display}
+          />
 
           {/* Template scope */}
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {rule.checklist_template_name ? (
               <>
-                Template:{' '}
+                {t('notifications.template')}:{' '}
                 <span className="font-medium text-gray-800 dark:text-gray-200">
                   {rule.checklist_template_name}
                 </span>
               </>
             ) : (
-              <span className="italic text-gray-400 dark:text-gray-500">All templates</span>
+              <span className="italic text-gray-400 dark:text-gray-500">{t('notifications.allTemplates')}</span>
             )}
           </span>
 
           {/* Sequence count */}
           <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-            {seqCount} sequence{seqCount !== 1 ? 's' : ''}
+            {t('notifications.sequenceCount', { count: seqCount, plural: seqCount === 1 ? '' : 's' })}
           </span>
 
           {/* Active indicator */}
@@ -307,7 +323,7 @@ function RuleCard({ rule }: RuleCardProps) {
             className={`flex h-2 w-2 rounded-full ${
               rule.is_active ? 'bg-green-500' : 'bg-gray-400'
             }`}
-            title={rule.is_active ? 'Active' : 'Inactive'}
+            title={rule.is_active ? t('common.active') : t('common.inactive')}
           />
 
           {/* Actions */}
@@ -316,7 +332,7 @@ function RuleCard({ rule }: RuleCardProps) {
             <button
               onClick={handleToggle}
               disabled={toggleMutation.isPending}
-              title={rule.is_active ? 'Deactivate' : 'Activate'}
+              title={rule.is_active ? t('common.deactivate') : t('common.activate')}
               className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             >
               {rule.is_active ? (
@@ -330,7 +346,7 @@ function RuleCard({ rule }: RuleCardProps) {
             <button
               onClick={() => setDeleteDialogOpen(true)}
               disabled={deleteMutation.isPending}
-              title="Delete rule"
+              title={t('notifications.deleteRule')}
               className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             >
               <Trash2 className="h-4 w-4" />
@@ -340,7 +356,7 @@ function RuleCard({ rule }: RuleCardProps) {
             {seqCount > 0 && (
               <button
                 onClick={() => setExpanded((v) => !v)}
-                title={expanded ? 'Collapse' : 'Show sequences'}
+                title={expanded ? t('common.collapse') : t('notifications.showSequences')}
                 className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
               >
                 {expanded ? (
@@ -357,7 +373,7 @@ function RuleCard({ rule }: RuleCardProps) {
         {expanded && seqCount > 0 && (
           <div className="border-t border-gray-100 px-4 pb-4 pt-3 dark:border-gray-700 space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-              Sequences
+              {t('notifications.sequences')}
             </p>
             {rule.sequences.map((seq) => (
               <SequenceRow key={seq.id} seq={seq} />
@@ -369,9 +385,9 @@ function RuleCard({ rule }: RuleCardProps) {
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete Notification Rule"
-        description="This will permanently delete the rule and all its sequences. This action cannot be undone."
-        confirmLabel="Delete"
+        title={t('notifications.deleteRuleTitle')}
+        description={t('notifications.deleteRuleConfirm')}
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={handleDelete}
       />
@@ -382,6 +398,7 @@ function RuleCard({ rule }: RuleCardProps) {
 // ─── Rules Tab ─────────────────────────────────────────────────────────────────
 
 function RulesTab() {
+  const { t } = useI18n()
   const [showNewForm, setShowNewForm] = useState(false)
   const [filterEventType, setFilterEventType] = useState('')
   const [filterActive, setFilterActive] = useState<'' | 'true' | 'false'>('')
@@ -404,10 +421,10 @@ function RulesTab() {
           onChange={(e) => setFilterEventType(e.target.value)}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
         >
-          <option value="">All event types</option>
+          <option value="">{t('notifications.allEventTypes')}</option>
           {EVENT_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.labelKey)}
             </option>
           ))}
         </select>
@@ -418,9 +435,9 @@ function RulesTab() {
           onChange={(e) => setFilterActive(e.target.value as '' | 'true' | 'false')}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
         >
-          <option value="">All statuses</option>
-          <option value="true">Active only</option>
-          <option value="false">Inactive only</option>
+          <option value="">{t('common.allStatuses')}</option>
+          <option value="true">{t('notifications.activeOnly')}</option>
+          <option value="false">{t('notifications.inactiveOnly')}</option>
         </select>
 
         <div className="ml-auto">
@@ -429,7 +446,7 @@ function RulesTab() {
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            New Rule
+            {t('notifications.newRule')}
           </button>
         </div>
       </div>
@@ -440,14 +457,14 @@ function RulesTab() {
       {/* Loading */}
       {isLoading && (
         <div className="flex h-40 items-center justify-center text-gray-500 dark:text-gray-400">
-          Loading rules...
+          {t('notifications.loadingRules')}
         </div>
       )}
 
       {/* Error */}
       {isError && (
         <div className="flex h-40 items-center justify-center text-red-500 dark:text-red-400">
-          Failed to load notification rules.
+          {t('notifications.rulesLoadFailed')}
         </div>
       )}
 
@@ -455,12 +472,12 @@ function RulesTab() {
       {!isLoading && !isError && rules.length === 0 && (
         <div className="flex h-40 flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
           <Bell className="h-8 w-8 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm">No notification rules found.</p>
+          <p className="text-sm">{t('notifications.noRules')}</p>
           <button
             onClick={() => setShowNewForm(true)}
             className="text-sm text-blue-600 hover:underline dark:text-blue-400"
           >
-            Create your first rule
+            {t('notifications.createFirstRule')}
           </button>
         </div>
       )}
@@ -480,6 +497,7 @@ function RulesTab() {
 // ─── Logs Tab ──────────────────────────────────────────────────────────────────
 
 function LogsTab() {
+  const { t } = useI18n()
   const [filterStatus, setFilterStatus] = useState('')
 
   const params: { status?: string } = {}
@@ -497,24 +515,24 @@ function LogsTab() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
         >
-          <option value="">All statuses</option>
-          <option value="sent">Sent</option>
-          <option value="failed">Failed</option>
-          <option value="pending">Pending</option>
+          <option value="">{t('common.allStatuses')}</option>
+          <option value="sent">{t('status.sent')}</option>
+          <option value="failed">{t('status.failed')}</option>
+          <option value="pending">{t('status.pending')}</option>
         </select>
       </div>
 
       {/* Loading */}
       {isLoading && (
         <div className="flex h-40 items-center justify-center text-gray-500 dark:text-gray-400">
-          Loading logs...
+          {t('notifications.loadingLogs')}
         </div>
       )}
 
       {/* Error */}
       {isError && (
         <div className="flex h-40 items-center justify-center text-red-500 dark:text-red-400">
-          Failed to load notification logs.
+          {t('notifications.logsLoadFailed')}
         </div>
       )}
 
@@ -522,7 +540,7 @@ function LogsTab() {
       {!isLoading && !isError && logs.length === 0 && (
         <div className="flex h-40 flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
           <Mail className="h-8 w-8 text-gray-300 dark:text-gray-600" />
-          <p className="text-sm">No notification logs found.</p>
+          <p className="text-sm">{t('notifications.noLogs')}</p>
         </div>
       )}
 
@@ -533,19 +551,19 @@ function LogsTab() {
             <thead className="bg-gray-50 dark:bg-gray-800/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Recipient
+                  {t('notifications.recipient')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Sent At
+                  {t('notifications.sentAt')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Instance
+                  {t('notifications.instance')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                  Created
+                  {t('common.created')}
                 </th>
               </tr>
             </thead>
@@ -592,6 +610,7 @@ function LogsTab() {
 type Tab = 'rules' | 'logs'
 
 export function NotificationsPage() {
+  const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<Tab>('rules')
 
   return (
@@ -599,9 +618,9 @@ export function NotificationsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('notifications.title')}</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage email notification rules and view delivery logs
+            {t('notifications.subtitle')}
           </p>
         </div>
       </div>
@@ -618,7 +637,7 @@ export function NotificationsPage() {
             }`}
           >
             <Bell className="h-4 w-4" />
-            Rules
+            {t('notifications.rules')}
           </button>
           <button
             onClick={() => setActiveTab('logs')}
@@ -629,7 +648,7 @@ export function NotificationsPage() {
             }`}
           >
             <Mail className="h-4 w-4" />
-            Logs
+            {t('notifications.logs')}
           </button>
         </nav>
       </div>

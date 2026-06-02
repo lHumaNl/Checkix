@@ -10,6 +10,8 @@ import {
 } from '@/api/useAssignments'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -48,17 +50,17 @@ const defaultForm: CreateFormState = {
 // Helpers / sub-components
 // ---------------------------------------------------------------------------
 
-const ASSIGNMENT_TYPE_LABELS: Record<Assignment['assignment_type'], string> = {
-  template: 'Template',
-  item: 'Item',
-  runtime: 'Runtime',
+const ASSIGNMENT_TYPE_LABEL_KEYS: Record<Assignment['assignment_type'], MessageKey> = {
+  template: 'assignments.typeTemplate',
+  item: 'assignments.typeItem',
+  runtime: 'assignments.typeRuntime',
 }
 
-const ASSIGNEE_TYPE_LABELS: Record<Assignment['assignee_type'], string> = {
-  user: 'User',
-  group: 'Group',
-  parameter: 'Parameter',
-  manager: 'Manager',
+const ASSIGNEE_TYPE_LABEL_KEYS: Record<Assignment['assignee_type'], MessageKey> = {
+  user: 'assignments.assigneeUser',
+  group: 'assignments.assigneeGroup',
+  parameter: 'assignments.assigneeParameter',
+  manager: 'assignments.assigneeManager',
 }
 
 const ASSIGNMENT_TYPE_COLORS: Record<Assignment['assignment_type'], string> = {
@@ -83,17 +85,19 @@ function Badge({ label, colorClass }: { label: string; colorClass: string }) {
 }
 
 function TableSkeleton() {
+  const { t } = useI18n()
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
             <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 w-8"></th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Target</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Assignee</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Type</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Exclusive</th>
-            <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">Actions</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.target')}</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.assignee')}</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('common.type')}</th>
+            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.exclusive')}</th>
+            <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('common.actions')}</th>
           </tr>
         </thead>
         <tbody>
@@ -114,18 +118,20 @@ function TableSkeleton() {
 }
 
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
+  const { t } = useI18n()
+
   return (
     <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
       <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
         <UserCheck size={32} className="text-gray-400 dark:text-gray-500" />
       </div>
       <p className="text-lg font-medium mb-1 text-gray-700 dark:text-gray-300">
-        {hasFilters ? 'No assignments match your filters' : 'No assignments yet'}
+        {hasFilters ? t('assignments.noMatch') : t('assignments.noAssignments')}
       </p>
       <p className="text-sm">
         {hasFilters
-          ? 'Try adjusting the search or filter criteria.'
-          : 'Create your first assignment to get started.'}
+          ? t('assignments.adjustFilters')
+          : t('assignments.createFirst')}
       </p>
     </div>
   )
@@ -141,6 +147,7 @@ interface CreateModalProps {
 }
 
 function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
+  const { t } = useI18n()
   const [form, setForm] = useState<CreateFormState>(defaultForm)
   const [errors, setErrors] = useState<Partial<Record<keyof CreateFormState, string>>>({})
 
@@ -155,22 +162,22 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
     const next: Partial<Record<keyof CreateFormState, string>> = {}
 
     if (form.assignment_type === 'template' && !form.checklist_template.trim()) {
-      next.checklist_template = 'Template ID is required for template assignments.'
+      next.checklist_template = t('assignments.validationTemplateRequired')
     }
     if (form.assignment_type === 'item' && !form.checklist_item.trim()) {
-      next.checklist_item = 'Item ID is required for item assignments.'
+      next.checklist_item = t('assignments.validationItemRequired')
     }
     if (form.assignment_type === 'runtime' && !form.checklist_instance.trim()) {
-      next.checklist_instance = 'Instance ID is required for runtime assignments.'
+      next.checklist_instance = t('assignments.validationInstanceRequired')
     }
     if (form.assignee_type === 'user' && !form.assignee_user.trim()) {
-      next.assignee_user = 'User ID is required.'
+      next.assignee_user = t('assignments.validationUserRequired')
     }
     if (form.assignee_type === 'group' && !form.assignee_group.trim()) {
-      next.assignee_group = 'Group ID is required.'
+      next.assignee_group = t('assignments.validationGroupRequired')
     }
     if (form.assignee_type === 'parameter' && !form.assignee_parameter.trim()) {
-      next.assignee_parameter = 'Parameter name is required.'
+      next.assignee_parameter = t('assignments.validationParameterRequired')
     }
 
     setErrors(next)
@@ -195,13 +202,13 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
     createMutation.mutate(payload, {
       onSuccess: () => {
-        toast({ title: 'Assignment created successfully', variant: 'default' })
+          toast({ title: t('assignments.created'), variant: 'default' })
         setForm(defaultForm)
         setErrors({})
         onOpenChange(false)
       },
       onError: () => {
-        toast({ title: 'Failed to create assignment', variant: 'destructive' })
+        toast({ title: t('assignments.createFailed'), variant: 'destructive' })
       },
     })
   }
@@ -227,7 +234,7 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
             <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-              New Assignment
+              {t('assignments.new')}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
@@ -244,28 +251,28 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
           >
             {/* Assignment Type */}
             <div>
-              <label className={labelClass}>Assignment Type *</label>
+              <label className={labelClass}>{t('assignments.assignmentType')} *</label>
               <select
                 value={form.assignment_type}
                 onChange={e => setField('assignment_type', e.target.value as CreateFormState['assignment_type'])}
                 className={inputClass}
               >
-                <option value="template">Template</option>
-                <option value="item">Item</option>
-                <option value="runtime">Runtime</option>
+                <option value="template">{t('assignments.typeTemplate')}</option>
+                <option value="item">{t('assignments.typeItem')}</option>
+                <option value="runtime">{t('assignments.typeRuntime')}</option>
               </select>
             </div>
 
             {/* Target field — changes based on assignment_type */}
             {form.assignment_type === 'template' && (
               <div>
-                <label className={labelClass}>Checklist Template ID *</label>
+                <label className={labelClass}>{t('assignments.targetTemplateId')} *</label>
                 <input
                   type="number"
                   min={1}
                   value={form.checklist_template}
                   onChange={e => setField('checklist_template', e.target.value)}
-                  placeholder="e.g. 42"
+                  placeholder={t('assignments.exampleNumber', { value: 42 })}
                   className={inputClass}
                 />
                 {errors.checklist_template && <p className={errorClass}>{errors.checklist_template}</p>}
@@ -274,13 +281,13 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {form.assignment_type === 'item' && (
               <div>
-                <label className={labelClass}>Checklist Item ID *</label>
+                <label className={labelClass}>{t('assignments.targetItemId')} *</label>
                 <input
                   type="number"
                   min={1}
                   value={form.checklist_item}
                   onChange={e => setField('checklist_item', e.target.value)}
-                  placeholder="e.g. 7"
+                  placeholder={t('assignments.exampleNumber', { value: 7 })}
                   className={inputClass}
                 />
                 {errors.checklist_item && <p className={errorClass}>{errors.checklist_item}</p>}
@@ -289,13 +296,13 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {form.assignment_type === 'runtime' && (
               <div>
-                <label className={labelClass}>Checklist Instance ID *</label>
+                <label className={labelClass}>{t('assignments.targetInstanceId')} *</label>
                 <input
                   type="number"
                   min={1}
                   value={form.checklist_instance}
                   onChange={e => setField('checklist_instance', e.target.value)}
-                  placeholder="e.g. 15"
+                  placeholder={t('assignments.exampleNumber', { value: 15 })}
                   className={inputClass}
                 />
                 {errors.checklist_instance && <p className={errorClass}>{errors.checklist_instance}</p>}
@@ -304,29 +311,29 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {/* Assignee Type */}
             <div>
-              <label className={labelClass}>Assignee Type *</label>
+              <label className={labelClass}>{t('assignments.assigneeType')} *</label>
               <select
                 value={form.assignee_type}
                 onChange={e => setField('assignee_type', e.target.value as CreateFormState['assignee_type'])}
                 className={inputClass}
               >
-                <option value="user">User</option>
-                <option value="group">Group</option>
-                <option value="parameter">Parameter</option>
-                <option value="manager">Manager</option>
+                <option value="user">{t('assignments.assigneeUser')}</option>
+                <option value="group">{t('assignments.assigneeGroup')}</option>
+                <option value="parameter">{t('assignments.assigneeParameter')}</option>
+                <option value="manager">{t('assignments.assigneeManager')}</option>
               </select>
             </div>
 
             {/* Assignee field — changes based on assignee_type */}
             {form.assignee_type === 'user' && (
               <div>
-                <label className={labelClass}>User ID *</label>
+                <label className={labelClass}>{t('assignments.userId')} *</label>
                 <input
                   type="number"
                   min={1}
                   value={form.assignee_user}
                   onChange={e => setField('assignee_user', e.target.value)}
-                  placeholder="e.g. 3"
+                  placeholder={t('assignments.exampleNumber', { value: 3 })}
                   className={inputClass}
                 />
                 {errors.assignee_user && <p className={errorClass}>{errors.assignee_user}</p>}
@@ -335,13 +342,13 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {form.assignee_type === 'group' && (
               <div>
-                <label className={labelClass}>Group ID *</label>
+                <label className={labelClass}>{t('assignments.groupId')} *</label>
                 <input
                   type="number"
                   min={1}
                   value={form.assignee_group}
                   onChange={e => setField('assignee_group', e.target.value)}
-                  placeholder="e.g. 2"
+                  placeholder={t('assignments.exampleNumber', { value: 2 })}
                   className={inputClass}
                 />
                 {errors.assignee_group && <p className={errorClass}>{errors.assignee_group}</p>}
@@ -350,12 +357,12 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {form.assignee_type === 'parameter' && (
               <div>
-                <label className={labelClass}>Parameter Name *</label>
+                <label className={labelClass}>{t('assignments.parameterName')} *</label>
                 <input
                   type="text"
                   value={form.assignee_parameter}
                   onChange={e => setField('assignee_parameter', e.target.value)}
-                  placeholder="e.g. department_head"
+                  placeholder={t('assignments.exampleParameter')}
                   className={inputClass}
                 />
                 {errors.assignee_parameter && <p className={errorClass}>{errors.assignee_parameter}</p>}
@@ -364,7 +371,7 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 
             {form.assignee_type === 'manager' && (
               <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-                The assignment will be resolved to the assignee's manager at runtime.
+                {t('assignments.managerRuntime')}
               </p>
             )}
 
@@ -378,9 +385,9 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Exclusive{' '}
+                  {t('assignments.exclusive')}{' '}
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                    (only this assignee, no others)
+                    ({t('assignments.exclusiveNote')})
                   </span>
                 </span>
               </label>
@@ -393,9 +400,9 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
                   className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Auto-notify{' '}
+                  {t('assignments.autoNotify')}{' '}
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                    (send notification when assigned)
+                    ({t('assignments.autoNotifyNote')})
                   </span>
                 </span>
               </label>
@@ -409,7 +416,7 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
                 type="button"
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </Dialog.Close>
             <button
@@ -421,12 +428,12 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
               {createMutation.isPending ? (
                 <>
                   <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Creating...
+                  {t('common.creating')}
                 </>
               ) : (
                 <>
                   <Plus size={16} />
-                  Create Assignment
+                  {t('assignments.new')}
                 </>
               )}
             </button>
@@ -442,6 +449,7 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
 // ---------------------------------------------------------------------------
 
 export function AssignmentsPage() {
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [assignmentTypeFilter, setAssignmentTypeFilter] = useState<AssignmentTypeFilter>('')
   const [assigneeTypeFilter, setAssigneeTypeFilter] = useState<AssigneeTypeFilter>('')
@@ -467,15 +475,18 @@ export function AssignmentsPage() {
   const handleDeleteClick = (assignment: Assignment) => {
     setConfirmState({
       open: true,
-      title: 'Delete assignment',
-      description: `Remove the assignment of "${assignment.target_display}" to "${assignment.assignee_display}"? This action cannot be undone.`,
+      title: t('assignments.deleteTitle'),
+      description: t('assignments.deleteConfirm', {
+        target: assignment.target_display || '—',
+        assignee: assignment.assignee_display || '—',
+      }),
       onConfirm: () => {
         deleteMutation.mutate(assignment.id, {
           onSuccess: () => {
-            toast({ title: 'Assignment deleted', variant: 'default' })
+            toast({ title: t('assignments.deleted'), variant: 'default' })
           },
           onError: () => {
-            toast({ title: 'Failed to delete assignment', variant: 'destructive' })
+            toast({ title: t('assignments.deleteFailed'), variant: 'destructive' })
           },
         })
       },
@@ -490,9 +501,9 @@ export function AssignmentsPage() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Assignments</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('assignments.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Manage who is assigned to which checklists, items, or instances.
+            {t('assignments.subtitle')}
           </p>
         </div>
 
@@ -501,7 +512,7 @@ export function AssignmentsPage() {
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] self-start sm:self-auto"
         >
           <Plus size={18} />
-          New Assignment
+          {t('assignments.new')}
         </button>
       </div>
 
@@ -517,7 +528,7 @@ export function AssignmentsPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search assignments..."
+            placeholder={t('assignments.search')}
             className="pl-9 pr-4 py-2 text-sm w-full border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -533,10 +544,10 @@ export function AssignmentsPage() {
             onChange={e => setAssignmentTypeFilter(e.target.value as AssignmentTypeFilter)}
             className={`${selectClass} pl-8`}
           >
-            <option value="">All types</option>
-            <option value="template">Template</option>
-            <option value="item">Item</option>
-            <option value="runtime">Runtime</option>
+            <option value="">{t('assignments.allTypes')}</option>
+            <option value="template">{t('assignments.typeTemplate')}</option>
+            <option value="item">{t('assignments.typeItem')}</option>
+            <option value="runtime">{t('assignments.typeRuntime')}</option>
           </select>
         </div>
 
@@ -551,11 +562,11 @@ export function AssignmentsPage() {
             onChange={e => setAssigneeTypeFilter(e.target.value as AssigneeTypeFilter)}
             className={`${selectClass} pl-8`}
           >
-            <option value="">All assignees</option>
-            <option value="user">User</option>
-            <option value="group">Group</option>
-            <option value="parameter">Parameter</option>
-            <option value="manager">Manager</option>
+            <option value="">{t('assignments.allAssignees')}</option>
+            <option value="user">{t('assignments.assigneeUser')}</option>
+            <option value="group">{t('assignments.assigneeGroup')}</option>
+            <option value="parameter">{t('assignments.assigneeParameter')}</option>
+            <option value="manager">{t('assignments.assigneeManager')}</option>
           </select>
         </div>
       </div>
@@ -563,8 +574,12 @@ export function AssignmentsPage() {
       {/* Result count pill */}
       {!isLoading && data && (
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {data.total ?? data.count ?? assignments.length}{' '}
-          {(data.total ?? data.count ?? assignments.length) === 1 ? 'assignment' : 'assignments'} found
+          {t('assignments.found', {
+            count: data.total ?? data.count ?? assignments.length,
+            label: (data.total ?? data.count ?? assignments.length) === 1
+              ? t('assignments.assignmentSingular')
+              : t('assignments.assignmentPlural'),
+          })}
         </p>
       )}
 
@@ -579,25 +594,25 @@ export function AssignmentsPage() {
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Target
+                  {t('assignments.target')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Assignee
+                  {t('assignments.assignee')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Assign. Type
+                  {t('assignments.assignmentType')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Assignee Type
+                  {t('assignments.assigneeType')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Exclusive
+                  {t('assignments.exclusive')}
                 </th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Notify
+                  {t('assignments.notify')}
                 </th>
                 <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
@@ -630,7 +645,7 @@ export function AssignmentsPage() {
                   {/* Assignment type badge */}
                   <td className="px-4 py-3">
                     <Badge
-                      label={ASSIGNMENT_TYPE_LABELS[assignment.assignment_type]}
+                      label={t(ASSIGNMENT_TYPE_LABEL_KEYS[assignment.assignment_type])}
                       colorClass={ASSIGNMENT_TYPE_COLORS[assignment.assignment_type]}
                     />
                   </td>
@@ -638,7 +653,7 @@ export function AssignmentsPage() {
                   {/* Assignee type badge */}
                   <td className="px-4 py-3">
                     <Badge
-                      label={ASSIGNEE_TYPE_LABELS[assignment.assignee_type]}
+                      label={t(ASSIGNEE_TYPE_LABEL_KEYS[assignment.assignee_type])}
                       colorClass={ASSIGNEE_TYPE_COLORS[assignment.assignee_type]}
                     />
                   </td>
@@ -647,19 +662,19 @@ export function AssignmentsPage() {
                   <td className="px-4 py-3">
                     {assignment.is_exclusive ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        Yes
+                        {t('common.yes')}
                       </span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs">No</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-xs">{t('common.no')}</span>
                     )}
                   </td>
 
                   {/* Auto-notify */}
                   <td className="px-4 py-3">
                     {assignment.auto_notify ? (
-                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">On</span>
+                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">{t('common.on')}</span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs">Off</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-xs">{t('common.off')}</span>
                     )}
                   </td>
 
@@ -668,7 +683,7 @@ export function AssignmentsPage() {
                     <button
                       onClick={() => handleDeleteClick(assignment)}
                       disabled={deleteMutation.isPending}
-                      title="Delete assignment"
+                      title={t('assignments.deleteTitle')}
                       className="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors disabled:opacity-40"
                     >
                       <Trash2 size={16} />
@@ -690,7 +705,7 @@ export function AssignmentsPage() {
         onOpenChange={open => setConfirmState(prev => ({ ...prev, open }))}
         title={confirmState.title}
         description={confirmState.description}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={confirmState.onConfirm}
       />

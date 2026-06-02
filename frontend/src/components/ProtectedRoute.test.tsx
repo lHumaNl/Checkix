@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { User } from '@/types'
 
 vi.mock('@/contexts/AuthContext', async () => {
   const actual = await vi.importActual('@/contexts/AuthContext')
@@ -14,6 +15,17 @@ vi.mock('@/contexts/AuthContext', async () => {
 })
 
 const mockUseAuth = vi.mocked(useAuth)
+
+const authenticatedUser: User = {
+  id: 1,
+  username: 'testuser',
+  email: 'test@example.com',
+  full_name: null,
+  avatar_url: null,
+  bio: null,
+  created_at: '2026-01-01T00:00:00.000Z',
+  updated_at: '2026-01-01T00:00:00.000Z',
+}
 
 const LocationDisplay = () => {
   const location = useLocation()
@@ -74,7 +86,7 @@ describe('ProtectedRoute', () => {
 
   it('renders children when authenticated', async () => {
     mockUseAuth.mockReturnValue({
-      user: { id: 1, username: 'testuser', email: 'test@example.com' } as any,
+      user: authenticatedUser,
       token: 'valid-token',
       loading: false,
       login: vi.fn(),

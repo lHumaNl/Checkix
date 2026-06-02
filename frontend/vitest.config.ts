@@ -16,6 +16,11 @@ export default defineConfig({
         singleFork: true,
       },
     },
+    server: {
+      deps: {
+        inline: ['react-big-calendar', 'uncontrollable'],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -29,8 +34,19 @@ export default defineConfig({
     },
   },
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      {
+        find: /^react-big-calendar$/,
+        replacement: path.resolve(
+          __dirname,
+          './node_modules/react-big-calendar/dist/react-big-calendar.esm.js'
+        ),
+      },
+      {
+        find: 'uncontrollable',
+        replacement: path.resolve(__dirname, './src/vendor/uncontrollableCompat.ts'),
+      },
+    ],
   },
 })

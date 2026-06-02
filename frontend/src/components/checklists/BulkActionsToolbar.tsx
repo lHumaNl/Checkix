@@ -11,6 +11,7 @@ import {
 import * as Popover from '@radix-ui/react-popover'
 import { useFolders } from '@/api/useFolders'
 import { useTags } from '@/api/useTags'
+import { useI18n } from '@/i18n'
 
 interface BulkActionsToolbarProps {
   selectedCount: number
@@ -31,6 +32,7 @@ export function BulkActionsToolbar({
   onSelectAll,
   onClearSelection,
 }: BulkActionsToolbarProps) {
+  const { t } = useI18n()
   const [newTags, setNewTags] = useState('')
   const { data: folders = [] } = useFolders()
   const { data: tags = [] } = useTags()
@@ -46,7 +48,7 @@ export function BulkActionsToolbar({
     >
       <div className="flex items-center gap-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-3 rounded-xl shadow-lg">
         <span className="text-sm font-medium">
-          {selectedCount} selected
+          {t('checklists.selectedCount', { count: selectedCount })}
         </span>
 
         <div className="h-4 w-px bg-gray-700 dark:bg-gray-300" />
@@ -55,7 +57,7 @@ export function BulkActionsToolbar({
           onClick={selectedCount === totalCount ? onClearSelection : onSelectAll}
           className="text-sm hover:underline"
         >
-          {selectedCount === totalCount ? 'Clear' : 'Select all'}
+          {selectedCount === totalCount ? t('common.clear') : t('common.selectAll')}
         </button>
 
         <div className="h-4 w-px bg-gray-700 dark:bg-gray-300" />
@@ -64,7 +66,7 @@ export function BulkActionsToolbar({
           <Popover.Trigger asChild>
             <button className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-800 dark:bg-gray-200 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors">
               <FolderInput size={16} />
-              Move
+              {t('common.move')}
               <ChevronDown size={14} />
             </button>
           </Popover.Trigger>
@@ -79,7 +81,7 @@ export function BulkActionsToolbar({
                 }}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
-                No Folder
+                {t('checklists.noFolder')}
               </button>
               {folders.map(folder => (
                 <button
@@ -100,7 +102,7 @@ export function BulkActionsToolbar({
           <Popover.Trigger asChild>
             <button className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-800 dark:bg-gray-200 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-300 transition-colors">
               <TagIcon size={16} />
-              Tag
+              {t('checklists.tags')}
               <ChevronDown size={14} />
             </button>
           </Popover.Trigger>
@@ -114,7 +116,7 @@ export function BulkActionsToolbar({
                   type="text"
                   value={newTags}
                   onChange={(e) => setNewTags(e.target.value)}
-                  placeholder="Add tags (comma separated)"
+                  placeholder={t('checklists.addTagsPlaceholder')}
                   className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -140,7 +142,7 @@ export function BulkActionsToolbar({
                 className="w-full flex items-center justify-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 <Check size={14} />
-                Add Tags
+                {t('checklists.addTags')}
               </button>
             </Popover.Content>
           </Popover.Portal>
@@ -151,7 +153,7 @@ export function BulkActionsToolbar({
           className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
           <Trash2 size={16} />
-          Delete
+          {t('common.delete')}
         </button>
 
         <button

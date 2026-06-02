@@ -11,6 +11,8 @@ import {
   GripVertical
 } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { ChecklistTemplate } from '@/types'
 import { TagPills } from './TagPills'
 
@@ -30,6 +32,12 @@ const statusColors = {
   archived: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
 }
 
+const statusLabelKeys = {
+  draft: 'status.draft',
+  active: 'status.active',
+  archived: 'status.archived',
+} as const satisfies Record<'draft' | 'active' | 'archived', MessageKey>
+
 export function ChecklistCard({ 
   checklist, 
   onDuplicate, 
@@ -39,7 +47,9 @@ export function ChecklistCard({
   dragHandleProps,
   isDragging
 }: ChecklistCardProps) {
+  const { t } = useI18n()
   const totalItems = checklist.items_count ?? 0
+  const status = checklist.status || 'draft'
 
   return (
     <motion.div
@@ -94,7 +104,7 @@ export function ChecklistCard({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none"
                   >
                     <Edit size={14} />
-                    Edit
+                    {t('common.edit')}
                   </Link>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item asChild>
@@ -103,7 +113,7 @@ export function ChecklistCard({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
                   >
                     <Copy size={14} />
-                    Duplicate
+                    {t('checklists.duplicate')}
                   </button>
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
@@ -113,7 +123,7 @@ export function ChecklistCard({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
                   >
                     <Trash2 size={14} />
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -128,8 +138,8 @@ export function ChecklistCard({
         )}
 
         <div className="mt-3 flex flex-wrap gap-1">
-          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[checklist.status || 'draft']}`}>
-            {checklist.status || 'draft'}
+          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[status]}`}>
+            {t(statusLabelKeys[status])}
           </span>
           {checklist.tags?.length > 0 && (
             <TagPills tags={checklist.tags} maxVisible={3} size="sm" />
@@ -139,18 +149,18 @@ export function ChecklistCard({
         <div className="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-1">
             <CheckSquare size={14} />
-            <span>{totalItems} items</span>
+            <span>{t('checklists.itemsCount', { count: totalItems })}</span>
           </div>
           {checklist.folder_id && (
             <div className="flex items-center gap-1">
               <Folder size={14} />
-              <span>In folder</span>
+              <span>{t('checklists.inFolder')}</span>
             </div>
           )}
           {checklist.execution_mode === 'sequential' && (
             <div className="flex items-center gap-1">
               <Clock size={14} />
-              <span>Sequential</span>
+              <span>{t('checklists.sequential')}</span>
             </div>
           )}
         </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, Folder as FolderIcon, Plus, MoreHorizontal, Trash2, Edit } from 'lucide-react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useI18n } from '@/i18n'
 import type { Folder } from '@/types'
 
 interface FolderTreeProps {
@@ -21,6 +22,7 @@ export function FolderTree({
   onEditFolder,
   onDeleteFolder,
 }: FolderTreeProps) {
+  const { t } = useI18n()
   const [expandedIds, setExpandedIds] = useState<number[]>([])
 
   const toggleExpand = (id: number) => {
@@ -87,7 +89,7 @@ export function FolderTree({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
                   >
                     <Plus size={14} />
-                    New Subfolder
+                    {t('checklists.newSubfolder')}
                   </button>
                 </DropdownMenu.Item>
                 <DropdownMenu.Item asChild>
@@ -96,7 +98,7 @@ export function FolderTree({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
                   >
                     <Edit size={14} />
-                    Rename
+                    {t('checklists.renameFolder')}
                   </button>
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
@@ -106,7 +108,7 @@ export function FolderTree({
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
                   >
                     <Trash2 size={14} />
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -141,7 +143,7 @@ export function FolderTree({
         }`}
       >
         <FolderIcon size={16} className={selectedFolderId === null ? 'text-blue-500' : 'text-gray-400'} />
-        <span className="text-sm">All Folders</span>
+        <span className="text-sm">{t('checklists.allFolders')}</span>
       </div>
 
       {folders.map(folder => renderFolder(folder))}

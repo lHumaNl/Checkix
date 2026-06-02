@@ -53,7 +53,7 @@ test.describe('Instance Execution', () => {
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 10000 })
   }
 
-  test('creates and starts an instance from checklist', async ({ page, authenticatedPage }) => {
+  test('creates and starts an instance from checklist', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Instance Create')
     await createChecklistWithItems(page, name, 2)
     await startInstance(page, name)
@@ -63,7 +63,7 @@ test.describe('Instance Execution', () => {
     await expect(page.getByText('Item 2')).toBeVisible()
   })
 
-  test('checks and unchecks items', async ({ page, authenticatedPage }) => {
+  test('checks and unchecks items', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Check Items')
     await createChecklistWithItems(page, name, 2)
     await startInstance(page, name)
@@ -79,7 +79,7 @@ test.describe('Instance Execution', () => {
     await instancePage.expectItemNotChecked('Item 1')
   })
 
-  test('shows progress bar updates', async ({ page, authenticatedPage }) => {
+  test('shows progress bar updates', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Progress')
     await createChecklistWithItems(page, name, 2)
     await startInstance(page, name)
@@ -98,7 +98,7 @@ test.describe('Instance Execution', () => {
     await expect(page.getByText('2 of 2')).toBeVisible()
   })
 
-  test('pauses and resumes instance', async ({ page, authenticatedPage }) => {
+  test('pauses and resumes instance', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Pause Resume')
     await createChecklistWithItems(page, name, 1)
     await startInstance(page, name)
@@ -115,7 +115,7 @@ test.describe('Instance Execution', () => {
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 10000 })
   })
 
-  test('completes an instance', async ({ page, authenticatedPage }) => {
+  test('completes an instance', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Complete')
     await createChecklistWithItems(page, name, 1)
     await startInstance(page, name)
@@ -134,7 +134,7 @@ test.describe('Instance Execution', () => {
     await expectToast(page, 'completed')
   })
 
-  test('cancels an instance', async ({ page, authenticatedPage }) => {
+  test('cancels an instance', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Cancel')
     await createChecklistWithItems(page, name, 1)
     await startInstance(page, name)
@@ -152,7 +152,7 @@ test.describe('Instance Execution', () => {
     await expectToast(page, 'cancelled')
   })
 
-  test('completed instance disables checkboxes', async ({ page, authenticatedPage }) => {
+  test('completed instance disables checkboxes', async ({ authenticatedPage: page }) => {
     const name = generateUniqueName('Disabled')
     await createChecklistWithItems(page, name, 1)
     await startInstance(page, name)

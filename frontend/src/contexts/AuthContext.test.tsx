@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/mocks/server'
+import { setAccessToken } from '@/api/client'
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const AuthConsumer = () => {
 describe('AuthContext', () => {
   beforeEach(() => {
     localStorage.clear()
+    setAccessToken(null)
     vi.spyOn(window, 'location', 'get').mockRestore()
   })
 

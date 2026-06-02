@@ -1,5 +1,6 @@
-import { format, isToday, isTomorrow, addDays } from 'date-fns'
+import { isToday, isTomorrow, addDays } from 'date-fns'
 import type { CalendarEvent } from '@/types'
+import { useI18n } from '@/i18n'
 import { EventCard } from './EventCard'
 
 interface UpcomingEventsProps {
@@ -8,6 +9,7 @@ interface UpcomingEventsProps {
 }
 
 export function UpcomingEvents({ events, onEventClick }: UpcomingEventsProps) {
+  const { language, t } = useI18n()
   const safeEvents = Array.isArray(events) ? events : []
   const upcomingEvents = safeEvents
     .filter((event) => new Date(event.start_datetime) >= new Date())
@@ -19,13 +21,13 @@ export function UpcomingEvents({ events, onEventClick }: UpcomingEventsProps) {
     let key: string
 
     if (isToday(date)) {
-      key = 'Today'
+      key = t('calendar.today')
     } else if (isTomorrow(date)) {
-      key = 'Tomorrow'
+      key = t('calendar.tomorrow')
     } else if (date <= addDays(new Date(), 7)) {
-      key = format(date, 'EEEE')
+      key = date.toLocaleDateString(language, { weekday: 'long' })
     } else {
-      key = format(date, 'MMMM d, yyyy')
+      key = date.toLocaleDateString(language, { dateStyle: 'medium' })
     }
 
     if (!groups[key]) {
@@ -39,10 +41,10 @@ export function UpcomingEvents({ events, onEventClick }: UpcomingEventsProps) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-          Upcoming Events
+          {t('calendar.upcomingEvents')}
         </h3>
         <div className="text-center py-6 text-gray-500 dark:text-gray-400 text-sm">
-          No upcoming events
+          {t('calendar.noUpcomingEvents')}
         </div>
       </div>
     )
@@ -51,7 +53,7 @@ export function UpcomingEvents({ events, onEventClick }: UpcomingEventsProps) {
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
       <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-        Upcoming Events
+        {t('calendar.upcomingEvents')}
       </h3>
       <div className="space-y-4">
         {Object.entries(groupedEvents).map(([date, dateEvents]) => (

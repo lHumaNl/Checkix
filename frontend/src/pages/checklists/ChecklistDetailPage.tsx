@@ -22,6 +22,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { ChecklistDetailSkeleton } from '@/components/skeletons/ChecklistDetailSkeleton'
 import type { ChecklistItem } from '@/types'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 interface ChecklistVersionDetail {
   items?: ChecklistItem[]
@@ -33,13 +35,23 @@ const statusColors = {
   archived: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
 }
 
+const statusLabelKeys = {
+  draft: 'status.draft',
+  active: 'status.active',
+  archived: 'status.archived',
+} satisfies Record<keyof typeof statusColors, MessageKey>
+
+const executionModeLabelKeys = {
+  sequential: 'checklists.sequential',
+  free_order: 'checklists.freeOrder',
+} satisfies Record<string, MessageKey>
+
 export function ChecklistDetailPage() {
+  const { t } = useI18n()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const checklistId = id ? parseInt(id, 10) : undefined
-  if (checklistId !== undefined && isNaN(checklistId)) {
-    return <Navigate to="/checklists" />
-  }
+  const hasInvalidChecklistId = checklistId !== undefined && isNaN(checklistId)
   const { data: checklist, isLoading } = useChecklist(checklistId)
   const deleteChecklist = useDeleteChecklist()
   const duplicateChecklist = useDuplicateChecklist()
@@ -47,6 +59,10 @@ export function ChecklistDetailPage() {
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  if (hasInvalidChecklistId) {
+    return <Navigate to="/checklists" />
+  }
 
   const handleDelete = () => {
     setShowDeleteConfirm(true)
@@ -56,11 +72,11 @@ export function ChecklistDetailPage() {
     if (checklist) {
       deleteChecklist.mutate(checklist.id, {
         onSuccess: () => {
-          toast({ title: 'Checklist deleted', variant: 'default' })
+          toast({ title: t('checklists.deleted'), variant: 'default' })
           navigate('/checklists')
         },
         onError: () => {
-          toast({ title: 'Failed to delete checklist', variant: 'destructive' })
+          toast({ title: t('checklists.deleteFailed'), variant: 'destructive' })
         },
       })
     }
@@ -70,11 +86,11 @@ export function ChecklistDetailPage() {
     if (checklist) {
       duplicateChecklist.mutate(checklist.id, {
         onSuccess: (newChecklist) => {
-          toast({ title: 'Checklist duplicated', variant: 'default' })
+          toast({ title: t('checklists.duplicated'), variant: 'default' })
           navigate(`/checklists/${newChecklist.id}`)
         },
         onError: () => {
-          toast({ title: 'Failed to duplicate checklist', variant: 'destructive' })
+          toast({ title: t('checklists.duplicateFailed'), variant: 'destructive' })
         },
       })
     }
@@ -100,7 +116,7 @@ export function ChecklistDetailPage() {
   if (!checklist) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        Checklist not found
+        {t('checklists.notFound')}
       </div>
     )
   }
@@ -125,12 +141,12 @@ export function ChecklistDetailPage() {
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[checklist.status || 'draft']}`}>
-                {checklist.status || 'draft'}
+                {t(statusLabelKeys[checklist.status || 'draft'])}
               </span>
               {checklist.execution_mode === 'sequential' && (
                 <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <Clock size={12} />
-                  Sequential
+                   {t('checklists.sequential')}
                 </span>
               )}
             </div>
@@ -144,7 +160,7 @@ export function ChecklistDetailPage() {
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
           >
             <Play size={16} />
-            Start
+             {t('checklists.start')}
           </button>
 
           <button
@@ -171,7 +187,7 @@ export function ChecklistDetailPage() {
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
                   >
                     <Copy size={14} />
-                    Duplicate
+                    {t('checklists.duplicate')}
                   </button>
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
@@ -181,7 +197,7 @@ export function ChecklistDetailPage() {
                     className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
                   >
                     <Trash2 size={14} />
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
@@ -202,14 +218,14 @@ export function ChecklistDetailPage() {
             <div className="flex items-center gap-2">
               <CheckSquare size={16} className="text-gray-400" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Items</p>
+                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.items')}</p>
                 <p className="font-medium text-gray-900 dark:text-white">{checklist.items_count ?? detailItems.length}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Play size={16} className="text-gray-400" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Uses</p>
+                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.uses')}</p>
                 <p className="font-medium text-gray-900 dark:text-white">{checklist.usage_count || 0}</p>
               </div>
             </div>
@@ -217,7 +233,7 @@ export function ChecklistDetailPage() {
               <div className="flex items-center gap-2">
                 <Folder size={16} className="text-gray-400" />
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Category</p>
+                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.category')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">{checklist.category}</p>
                 </div>
               </div>
@@ -225,9 +241,9 @@ export function ChecklistDetailPage() {
             <div className="flex items-center gap-2">
               <Clock size={16} className="text-gray-400" />
               <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Mode</p>
+                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.mode')}</p>
                 <p className="font-medium text-gray-900 dark:text-white capitalize">
-                  {checklist.execution_mode?.replace('_', ' ') || 'free order'}
+                  {t(executionModeLabelKeys[checklist.execution_mode || 'free_order'])}
                 </p>
               </div>
             </div>
@@ -238,7 +254,7 @@ export function ChecklistDetailPage() {
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
             <div className="flex items-center gap-2 mb-2">
               <TagIcon size={16} className="text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tags</span>
+               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('checklists.tags')}</span>
             </div>
             <TagPills tags={checklist.tags} />
           </div>
@@ -246,7 +262,7 @@ export function ChecklistDetailPage() {
 
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Checklist Items
+             {t('checklists.itemsTitle')}
           </h2>
           <div className="space-y-2">
             {detailItems.map((item, index) => (
@@ -289,9 +305,9 @@ export function ChecklistDetailPage() {
       <ConfirmDialog
         open={showDeleteConfirm}
         onOpenChange={setShowDeleteConfirm}
-        title="Delete checklist"
-        description="Are you sure you want to delete this checklist? This action cannot be undone."
-        confirmLabel="Delete"
+        title={t('checklists.deleteTitle')}
+        description={t('checklists.deleteOneConfirm')}
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={confirmDelete}
       />

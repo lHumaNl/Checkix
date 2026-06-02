@@ -21,7 +21,11 @@ export function useWebSocket({
   const retriesRef = useRef(0)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const onMessageRef = useRef(onMessage)
-  onMessageRef.current = onMessage
+  const connectRef = useRef<(() => Promise<void>) | undefined>(undefined)
+
+  useEffect(() => {
+    onMessageRef.current = onMessage
+  }, [onMessage])
 
   const connect = useCallback(async () => {
     if (!enabled) return
@@ -60,7 +64,9 @@ export function useWebSocket({
       wsRef.current = null
       if (enabled && retriesRef.current < maxRetries) {
         retriesRef.current += 1
-        reconnectTimerRef.current = setTimeout(() => { connect() }, reconnectInterval)
+        reconnectTimerRef.current = setTimeout(() => {
+          void connectRef.current?.()
+        }, reconnectInterval)
       }
     }
 
@@ -70,6 +76,10 @@ export function useWebSocket({
 
     wsRef.current = ws
   }, [url, enabled, reconnectInterval, maxRetries])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   useEffect(() => {
     connect()

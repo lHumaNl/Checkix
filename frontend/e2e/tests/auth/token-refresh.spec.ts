@@ -1,7 +1,7 @@
 import { test, expect } from '../../fixtures/auth.fixture'
 
 test.describe('Token Refresh', () => {
-  test('expired access token triggers refresh', async ({ page, authenticatedPage }) => {
+  test('expired access token triggers refresh', async ({ page }) => {
     let refreshCalled = false
 
     await page.route('**/api/users/me/', (route) => {

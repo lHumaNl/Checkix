@@ -19,6 +19,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { InstanceSkeleton } from '@/components/skeletons/InstanceSkeleton'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { ChecklistItemInstance } from '@/types'
 
 const statusColors: Record<string, string> = {
@@ -29,12 +31,20 @@ const statusColors: Record<string, string> = {
   paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
 }
 
+const statusLabelKeys: Record<string, MessageKey> = {
+  draft: 'status.draft',
+  in_progress: 'status.inProgress',
+  completed: 'status.completed',
+  cancelled: 'status.cancelled',
+  paused: 'status.paused',
+}
+
 export function ChecklistInstancePage() {
+  const { t } = useI18n()
   const { id } = useParams<{ id: string }>()
-  const instanceId = id ? parseInt(id, 10) : undefined
-  if (instanceId !== undefined && isNaN(instanceId)) {
-    return <Navigate to="/checklists" />
-  }
+  const parsedInstanceId = id ? parseInt(id, 10) : undefined
+  const hasInvalidInstanceId = parsedInstanceId !== undefined && isNaN(parsedInstanceId)
+  const instanceId = hasInvalidInstanceId ? undefined : parsedInstanceId
   const { data: instance, isLoading } = useChecklistInstance(instanceId)
   const updateResponse = useUpdateResponse()
   const startInstance = useStartInstance()
@@ -54,7 +64,7 @@ export function ChecklistInstancePage() {
     variant: 'default' | 'destructive'
     confirmLabel: string
     onConfirm: () => void
-  }>({ open: false, title: '', description: '', variant: 'default', confirmLabel: 'Confirm', onConfirm: () => {} })
+  }>({ open: false, title: '', description: '', variant: 'default', confirmLabel: t('common.apply'), onConfirm: () => {} })
 
   const queryClient = useQueryClient()
 
@@ -112,7 +122,6 @@ export function ChecklistInstancePage() {
         })
       return next
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance])
 
   const handleToggleItem = (itemId: number) => {
@@ -157,18 +166,18 @@ export function ChecklistInstancePage() {
   const handleComplete = () => {
     setConfirmState({
       open: true,
-      title: 'Complete checklist',
-      description: 'Are you sure you want to mark this checklist as complete?',
+      title: t('checklistInstance.completeTitle'),
+      description: t('checklistInstance.completeConfirm'),
       variant: 'default',
-      confirmLabel: 'Complete',
+      confirmLabel: t('status.completed'),
       onConfirm: () => {
         if (instanceId) {
           completeInstance.mutate(instanceId, {
             onSuccess: () => {
-              toast({ title: 'Checklist completed', variant: 'default' })
+              toast({ title: t('checklistInstance.completedToast'), variant: 'default' })
             },
             onError: () => {
-              toast({ title: 'Failed to complete checklist', variant: 'destructive' })
+              toast({ title: t('checklistInstance.completeFailed'), variant: 'destructive' })
             },
           })
         }
@@ -179,24 +188,26 @@ export function ChecklistInstancePage() {
   const handleCancel = () => {
     setConfirmState({
       open: true,
-      title: 'Cancel checklist',
-      description: 'Are you sure you want to cancel this checklist? Progress will be lost.',
+      title: t('checklistInstance.cancelTitle'),
+      description: t('checklistInstance.cancelConfirm'),
       variant: 'destructive',
-      confirmLabel: 'Cancel checklist',
+      confirmLabel: t('checklistInstance.cancelTitle'),
       onConfirm: () => {
         if (instanceId) {
           cancelInstance.mutate(instanceId, {
             onSuccess: () => {
-              toast({ title: 'Checklist cancelled', variant: 'default' })
+              toast({ title: t('checklistInstance.cancelledToast'), variant: 'default' })
             },
             onError: () => {
-              toast({ title: 'Failed to cancel checklist', variant: 'destructive' })
+              toast({ title: t('checklistInstance.cancelFailed'), variant: 'destructive' })
             },
           })
         }
       },
     })
   }
+
+  if (hasInvalidInstanceId) return <Navigate to="/checklists" />
 
   if (isLoading) {
     return <InstanceSkeleton />
@@ -205,7 +216,7 @@ export function ChecklistInstancePage() {
   if (!instance) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        Instance not found
+        {t('checklistInstance.notFound')}
       </div>
     )
   }
@@ -227,7 +238,7 @@ export function ChecklistInstancePage() {
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[instance.status] ?? statusColors.draft}`}>
-                  {instance.status_display || instance.status}
+                  {t(statusLabelKeys[instance.status] ?? 'status.draft')}
                 </span>
               </div>
             </div>
@@ -240,7 +251,7 @@ export function ChecklistInstancePage() {
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 min-h-[44px]"
               >
                 <Play size={16} />
-                Start
+                {t('checklists.start')}
               </button>
             )}
 
@@ -251,14 +262,14 @@ export function ChecklistInstancePage() {
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-yellow-700 bg-yellow-100 dark:bg-yellow-900/50 dark:text-yellow-300 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900 min-h-[44px]"
                 >
                   <Pause size={16} />
-                  <span className="hidden sm:inline">Pause</span>
+                  <span className="hidden sm:inline">{t('status.paused')}</span>
                 </button>
                 <button
                   onClick={handleComplete}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 min-h-[44px]"
                 >
                   <CheckCircle size={16} />
-                  <span className="hidden sm:inline">Complete</span>
+                  <span className="hidden sm:inline">{t('status.completed')}</span>
                 </button>
               </>
             )}
@@ -270,14 +281,14 @@ export function ChecklistInstancePage() {
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 min-h-[44px]"
                 >
                   <Play size={16} />
-                  <span className="hidden sm:inline">Resume</span>
+                  <span className="hidden sm:inline">{t('checklistInstance.resume')}</span>
                 </button>
                 <button
                   onClick={handleCancel}
                   className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-700 bg-red-100 dark:bg-red-900/50 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900 min-h-[44px]"
                 >
                   <XCircle size={16} />
-                  <span className="hidden sm:inline">Cancel</span>
+                  <span className="hidden sm:inline">{t('status.cancelled')}</span>
                 </button>
               </>
             )}
@@ -299,7 +310,7 @@ export function ChecklistInstancePage() {
                       className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
                     >
                       <XCircle size={14} />
-                      Cancel
+                      {t('status.cancelled')}
                     </button>
                   </DropdownMenu.Item>
                 </DropdownMenu.Content>
@@ -326,7 +337,7 @@ export function ChecklistInstancePage() {
           {placeholderItems.length > 0 && (
             <div className="mb-4 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase tracking-wide">
-                Parameters
+                {t('checklistInstance.parameters')}
               </h3>
               <div className="space-y-3">
                 {placeholderItems.map((ii: ChecklistItemInstance) => (
@@ -347,11 +358,14 @@ export function ChecklistInstancePage() {
                       type="text"
                       value={placeholderInputs[ii.id] ?? ''}
                       onChange={e => handlePlaceholderChange(ii, e.target.value)}
-                      placeholder={`Enter ${ii.title}…`}
+                      placeholder={t('checklistInstance.enterPlaceholder', { name: ii.title })}
                       className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                     />
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      {ii.children.filter(c => c.is_visible).length} of {ii.children.length} conditional item{ii.children.length !== 1 ? 's' : ''} visible
+                      {t('checklistInstance.conditionalVisible', {
+                        visible: ii.children.filter(c => c.is_visible).length,
+                        total: ii.children.length,
+                      })}
                     </p>
                   </div>
                 ))}
@@ -362,11 +376,11 @@ export function ChecklistInstancePage() {
           {instance.status === 'draft' ? (
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                Checklist Items ({items.length})
+                {t('checklistInstance.itemsCountTitle', { count: items.length })}
               </h3>
               {items.length === 0 ? (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No items yet. Click Start to begin this checklist.
+                  {t('checklistInstance.noItemsStart')}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -437,7 +451,7 @@ export function ChecklistInstancePage() {
             className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Item Details</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('checklistInstance.itemDetails')}</h3>
               <button
                 onClick={() => setSelectedItem(null)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
@@ -453,9 +467,9 @@ export function ChecklistInstancePage() {
                 )}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                <p>Status: {selectedItem.is_completed ? 'Completed' : 'Pending'}</p>
+                <p>{t('checklistInstance.statusLine', { status: t(selectedItem.is_completed ? 'status.completed' : 'status.pending') })}</p>
                 {selectedItem.completed_at && (
-                  <p>Completed at: {new Date(selectedItem.completed_at).toLocaleString()}</p>
+                  <p>{t('checklistInstance.completedAt', { date: new Date(selectedItem.completed_at).toLocaleString() })}</p>
                 )}
               </div>
             </div>

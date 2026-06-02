@@ -137,24 +137,24 @@ type TestFixtures = {
 }
 
 export const test = base.extend<TestFixtures>({
-  authPage: async ({ page }, use) => {
-    await use(new AuthPage(page))
+  authPage: async ({ page }, fixture) => {
+    await fixture(new AuthPage(page))
   },
 
-  checklistsPage: async ({ page }, use) => {
-    await use(new ChecklistsPage(page))
+  checklistsPage: async ({ page }, fixture) => {
+    await fixture(new ChecklistsPage(page))
   },
 
-  instancePage: async ({ page }, use) => {
-    await use(new InstancePage(page))
+  instancePage: async ({ page }, fixture) => {
+    await fixture(new InstancePage(page))
   },
 
-  authenticatedPage: async ({ page }, use) => {
+  authenticatedPage: async ({ page }, fixture) => {
     // storageState from global-setup provides auth automatically.
     // Just navigate to the app and verify we're logged in.
     await page.goto('/')
     await expect(page).not.toHaveURL(/\/login/, { timeout: 10_000 })
-    await use(page)
+    await fixture(page)
   },
 })
 

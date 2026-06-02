@@ -1,4 +1,6 @@
 import { Download, Star, User } from 'lucide-react'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { CommunityTemplate } from '@/types'
 
 interface TemplateCardProps {
@@ -32,12 +34,26 @@ const categoryEmojis: Record<string, string> = {
   productivity: '⚡',
 }
 
+const categoryLabelKeys: Record<string, MessageKey> = {
+  travel: 'community.categoryTravel',
+  work: 'community.categoryWork',
+  health: 'community.categoryHealth',
+  home: 'community.categoryHome',
+  shopping: 'community.categoryShopping',
+  education: 'community.categoryEducation',
+  fitness: 'community.categoryFitness',
+  finance: 'community.categoryFinance',
+  productivity: 'community.categoryProductivity',
+}
+
 function getCategoryEmoji(category: string): string {
   return categoryEmojis[category] ?? '📋'
 }
 
 export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }: TemplateCardProps) {
+  const { t } = useI18n()
   const categoryColor = categoryColors[template.category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+  const categoryLabel = categoryLabelKeys[template.category] ? t(categoryLabelKeys[template.category]) : template.category
 
   if (variant === 'list') {
     return (
@@ -52,7 +68,7 @@ export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-medium text-gray-900 dark:text-white truncate">{template.title}</h3>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${categoryColor}`}>
-              {template.category}
+              {categoryLabel}
             </span>
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{template.description}</p>
@@ -78,7 +94,7 @@ export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }
           }}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
         >
-          Download
+          {t('common.download')}
         </button>
       </div>
     )
@@ -98,7 +114,7 @@ export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }
         <div className="flex items-start justify-between gap-2 mb-2">
           <h3 className="font-medium text-gray-900 dark:text-white line-clamp-1">{template.title}</h3>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${categoryColor}`}>
-            {template.category}
+            {categoryLabel}
           </span>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{template.description}</p>
@@ -126,7 +142,7 @@ export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }
           }}
           className="w-full mt-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors opacity-0 group-hover:opacity-100"
         >
-          Download Template
+          {t('community.downloadTemplate')}
         </button>
       </div>
     </div>

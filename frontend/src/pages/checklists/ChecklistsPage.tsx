@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Plus, Grid3X3, Columns3, List, Search } from 'lucide-react'
 import { useChecklists, useBulkDeleteChecklists, useMoveChecklistsToFolder, useAddTagsToChecklists, useDuplicateChecklist, useDeleteChecklist, useUpdateChecklist } from '@/api/useChecklists'
 import { ChecklistGrid } from '@/components/checklists/ChecklistGrid'
@@ -11,10 +11,12 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { useDebounce } from '@/hooks/useDebounce'
 import { ChecklistsSkeleton } from '@/components/skeletons/ChecklistsSkeleton'
+import { useI18n } from '@/i18n'
 
 type ViewMode = 'grid' | 'list' | 'kanban'
 
 export function ChecklistsPage() {
+  const { t } = useI18n()
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [showFilters, setShowFilters] = useState(true)
   const [search, setSearch] = useState('')
@@ -23,7 +25,6 @@ export function ChecklistsPage() {
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const selectedIdsRef = useRef(selectedIds)
-  selectedIdsRef.current = selectedIds
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [confirmState, setConfirmState] = useState<{
     open: boolean
@@ -33,6 +34,10 @@ export function ChecklistsPage() {
   }>({ open: false, title: '', description: '', onConfirm: () => {} })
 
   const debouncedSearch = useDebounce(search, 300)
+
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds
+  }, [selectedIds])
 
   const { data: checklistsData, isLoading } = useChecklists({
     folder_id: selectedFolderId,
@@ -53,10 +58,10 @@ export function ChecklistsPage() {
       { id, data: { status: status as 'draft' | 'active' | 'archived' } },
       {
         onSuccess: () => {
-          toast({ title: 'Status updated', variant: 'default' })
+          toast({ title: t('checklists.statusUpdated'), variant: 'default' })
         },
         onError: () => {
-          toast({ title: 'Failed to update status', variant: 'destructive' })
+          toast({ title: t('checklists.statusUpdateFailed'), variant: 'destructive' })
         },
       }
     )
@@ -82,17 +87,17 @@ export function ChecklistsPage() {
   const handleBulkDelete = () => {
     setConfirmState({
       open: true,
-      title: 'Delete checklists',
-      description: `Are you sure you want to delete ${selectedIds.length} checklists? This action cannot be undone.`,
+      title: t('checklists.deleteManyTitle'),
+      description: t('checklists.deleteManyConfirm', { count: selectedIds.length }),
       onConfirm: () => {
         const ids = selectedIdsRef.current
         bulkDelete.mutate(ids, {
           onSuccess: () => {
             setSelectedIds([])
-            toast({ title: `${ids.length} checklists deleted`, variant: 'default' })
+            toast({ title: t('checklists.deletedMany', { count: ids.length }), variant: 'default' })
           },
           onError: () => {
-            toast({ title: 'Failed to delete checklists', variant: 'destructive' })
+            toast({ title: t('checklists.deleteManyFailed'), variant: 'destructive' })
           },
         })
       },
@@ -105,7 +110,7 @@ export function ChecklistsPage() {
       {
         onSuccess: () => {
           setSelectedIds([])
-          toast({ title: 'Checklists moved', variant: 'default' })
+          toast({ title: t('checklists.moved'), variant: 'default' })
         },
       }
     )
@@ -117,7 +122,7 @@ export function ChecklistsPage() {
       {
         onSuccess: () => {
           setSelectedIds([])
-          toast({ title: 'Tags added', variant: 'default' })
+          toast({ title: t('checklists.tagsAdded'), variant: 'default' })
         },
       }
     )
@@ -126,10 +131,10 @@ export function ChecklistsPage() {
   const handleDuplicate = (id: number) => {
     duplicate.mutate(id, {
       onSuccess: () => {
-        toast({ title: 'Checklist duplicated', variant: 'default' })
+        toast({ title: t('checklists.duplicated'), variant: 'default' })
       },
       onError: () => {
-        toast({ title: 'Failed to duplicate checklist', variant: 'destructive' })
+        toast({ title: t('checklists.duplicateFailed'), variant: 'destructive' })
       },
     })
   }
@@ -137,15 +142,15 @@ export function ChecklistsPage() {
   const handleDelete = (id: number) => {
     setConfirmState({
       open: true,
-      title: 'Delete checklist',
-      description: 'Are you sure you want to delete this checklist? This action cannot be undone.',
+      title: t('checklists.deleteTitle'),
+      description: t('checklists.deleteOneConfirm'),
       onConfirm: () => {
         deleteOne.mutate(id, {
           onSuccess: () => {
-            toast({ title: 'Checklist deleted', variant: 'default' })
+            toast({ title: t('checklists.deleted'), variant: 'default' })
           },
           onError: () => {
-            toast({ title: 'Failed to delete checklist', variant: 'destructive' })
+            toast({ title: t('checklists.deleteFailed'), variant: 'destructive' })
           },
         })
       },
@@ -177,7 +182,7 @@ export function ChecklistsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              Checklists
+              {t('checklists.title')}
             </h1>
             <div className="relative flex-1 sm:flex-none">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -185,7 +190,7 @@ export function ChecklistsPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
+                placeholder={t('common.search')}
                 className="pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
               />
             </div>
@@ -219,7 +224,7 @@ export function ChecklistsPage() {
                   : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
-              Filters
+              {t('common.filters')}
             </button>
 
             <button
@@ -227,7 +232,7 @@ export function ChecklistsPage() {
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
             >
               <Plus size={18} />
-              <span className="hidden sm:inline">New Checklist</span>
+              <span className="hidden sm:inline">{t('checklists.new')}</span>
             </button>
           </div>
         </div>
@@ -239,8 +244,8 @@ export function ChecklistsPage() {
             <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
               <Plus size={32} />
             </div>
-            <p className="text-lg font-medium mb-1">No checklists found</p>
-            <p className="text-sm">Create your first checklist to get started</p>
+            <p className="text-lg font-medium mb-1">{t('checklists.noneFound')}</p>
+            <p className="text-sm">{t('checklists.createFirst')}</p>
           </div>
         ) : viewMode === 'grid' ? (
           <ChecklistGrid
@@ -292,7 +297,7 @@ export function ChecklistsPage() {
         onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}
         title={confirmState.title}
         description={confirmState.description}
-        confirmLabel="Delete"
+        confirmLabel={t('common.delete')}
         variant="destructive"
         onConfirm={confirmState.onConfirm}
       />

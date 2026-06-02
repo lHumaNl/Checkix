@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useI18n } from '@/i18n'
 
 interface InstanceProgressBarProps {
   completed: number
@@ -13,6 +14,7 @@ export function InstanceProgressBar({
   showLabel = true,
   size = 'md',
 }: InstanceProgressBarProps) {
+  const { t } = useI18n()
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
 
   const sizeClasses = {
@@ -33,7 +35,7 @@ export function InstanceProgressBar({
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {completed} of {total} completed
+            {t('checklistInstance.progressCompleted', { completed, total })}
           </span>
           <motion.span
             key={percentage}

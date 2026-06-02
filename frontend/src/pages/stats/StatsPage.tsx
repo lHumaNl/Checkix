@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BarChart3, TrendingUp, CheckSquare, Clock, Award, Layers } from 'lucide-react'
 import { useOverallStats, useTopTemplates, useStatsByCategory, useRecentStats } from '@/api/useStats'
 import { useExportStatsCSV } from '@/api/useCompletionData'
+import { useI18n } from '@/i18n'
 
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0]
@@ -58,6 +59,7 @@ function CompletionBar({ value, color = 'bg-blue-500' }: CompletionBarProps) {
 }
 
 export function StatsPage() {
+  const { t } = useI18n()
   const defaultRange = getDefaultRange()
   const [startDate, setStartDate] = useState(defaultRange.start)
   const [endDate, setEndDate] = useState(defaultRange.end)
@@ -111,13 +113,13 @@ export function StatsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Statistics</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stats.title')}</h1>
         <button
           onClick={() => exportMutation.mutate({ startDate: appliedStart, endDate: appliedEnd })}
           disabled={exportMutation.isPending}
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
         >
-          {exportMutation.isPending ? 'Exporting…' : 'Export CSV'}
+          {exportMutation.isPending ? t('stats.exporting') : t('dashboard.exportCsv')}
         </button>
       </div>
 
@@ -126,7 +128,7 @@ export function StatsPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              Start date
+              {t('common.startDate')}
             </label>
             <input
               type="date"
@@ -138,7 +140,7 @@ export function StatsPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              End date
+              {t('common.endDate')}
             </label>
             <input
               type="date"
@@ -152,7 +154,7 @@ export function StatsPage() {
             onClick={applyRange}
             className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
           >
-            Apply
+            {t('common.apply')}
           </button>
           <div className="flex gap-2 ml-2">
             {[7, 30, 90].map(d => (
@@ -179,23 +181,23 @@ export function StatsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
           <StatCard
             icon={<Layers size={18} />}
-            label="Templates used"
+            label={t('stats.templatesUsed')}
             value={overall?.total_templates ?? 0}
           />
           <StatCard
             icon={<CheckSquare size={18} />}
-            label="Instances created"
+            label={t('stats.instancesCreated')}
             value={overall?.total_instances_created ?? 0}
-            sub={`in selected period`}
+            sub={t('stats.inSelectedPeriod')}
           />
           <StatCard
             icon={<TrendingUp size={18} />}
-            label="Completed"
+            label={t('stats.completed')}
             value={overall?.total_instances_completed ?? 0}
           />
           <StatCard
             icon={<BarChart3 size={18} />}
-            label="Completion rate"
+            label={t('stats.completionRate')}
             value={`${overall?.avg_completion_rate ?? 0}%`}
           />
         </div>
@@ -206,7 +208,7 @@ export function StatsPage() {
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <Award size={18} className="text-yellow-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">Top Templates</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('stats.topTemplates')}</h2>
           </div>
           {topLoading ? (
             <div className="space-y-3">
@@ -216,7 +218,7 @@ export function StatsPage() {
             </div>
           ) : topTemplates.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-              No data for this period
+              {t('stats.noPeriodData')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -249,7 +251,7 @@ export function StatsPage() {
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} className="text-purple-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">By Category</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('stats.byCategory')}</h2>
           </div>
           {categoryLoading ? (
             <div className="space-y-3">
@@ -259,7 +261,7 @@ export function StatsPage() {
             </div>
           ) : categoryData.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-              No category data available
+              {t('stats.noCategoryData')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -292,24 +294,24 @@ export function StatsPage() {
         <div className="flex items-center gap-2 mb-4">
           <Clock size={18} className="text-green-500" />
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Recent Activity (last 30 days)
+            {t('stats.recentActivity')}
           </h2>
         </div>
         {recentLoading ? (
           <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
         ) : recentDays.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-            No recent activity
+            {t('stats.noRecentActivity')}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Date</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Created</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Completed</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Rate</th>
+                  <th className="text-left pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.date')}</th>
+                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.created')}</th>
+                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.completed')}</th>
+                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.rate')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

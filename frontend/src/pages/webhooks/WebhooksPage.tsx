@@ -24,6 +24,8 @@ import {
 } from '@/api/useWebhooks'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 // ---------------------------------------------------------------------------
 // Helpers / sub-components
@@ -32,11 +34,22 @@ import { toast } from '@/hooks/useToast'
 type EventType = 'instance_started' | 'instance_completed' | 'item_completed'
 type EventStatus = 'pending' | 'sent' | 'failed'
 
-const EVENT_TYPE_OPTIONS: { value: EventType; label: string }[] = [
-  { value: 'instance_started', label: 'Instance Started' },
-  { value: 'instance_completed', label: 'Instance Completed' },
-  { value: 'item_completed', label: 'Item Completed' },
+const EVENT_TYPE_OPTIONS: { value: EventType; labelKey: MessageKey }[] = [
+  { value: 'instance_started', labelKey: 'webhooks.eventInstanceStarted' },
+  { value: 'instance_completed', labelKey: 'webhooks.eventInstanceCompleted' },
+  { value: 'item_completed', labelKey: 'webhooks.eventItemCompleted' },
 ]
+
+const EVENT_TYPE_LABEL_KEYS = EVENT_TYPE_OPTIONS.reduce(
+  (labels, option) => ({ ...labels, [option.value]: option.labelKey }),
+  {} as Record<EventType, MessageKey>
+)
+
+const STATUS_LABEL_KEYS: Record<EventStatus, MessageKey> = {
+  pending: 'status.pending',
+  sent: 'status.sent',
+  failed: 'status.failed',
+}
 
 function eventTypeBadge(type: string) {
   const map: Record<string, string> = {
@@ -91,11 +104,12 @@ function WebhookSkeleton() {
 // ---------------------------------------------------------------------------
 
 function RecentEvents({ events }: { events: WebhookEvent[] }) {
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
 
   if (events.length === 0) {
     return (
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">No events yet.</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">{t('webhooks.noEvents')}</p>
     )
   }
 
@@ -107,7 +121,7 @@ function RecentEvents({ events }: { events: WebhookEvent[] }) {
         className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
       >
         <Activity size={13} />
-        Recent Events ({events.length})
+        {t('webhooks.recentEvents', { count: events.length })}
         {open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
       </button>
 
@@ -122,7 +136,7 @@ function RecentEvents({ events }: { events: WebhookEvent[] }) {
                 <span
                   className={`shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusBadge(ev.status)}`}
                 >
-                  {ev.status_display ?? ev.status}
+                  {ev.status && STATUS_LABEL_KEYS[ev.status as EventStatus] ? t(STATUS_LABEL_KEYS[ev.status as EventStatus]) : (ev.status_display ?? ev.status)}
                 </span>
                 {ev.checklist_instance_name && (
                   <span className="truncate text-gray-600 dark:text-gray-400">
@@ -181,6 +195,7 @@ interface WebhookFormModalProps {
 }
 
 function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps) {
+  const { t } = useI18n()
   const createMutation = useCreateWebhook()
   const updateMutation = useUpdateWebhook()
 
@@ -203,11 +218,11 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
 
   function validate(): boolean {
     const errs: Partial<Record<keyof WebhookFormValues, string>> = {}
-    if (!form.name.trim()) errs.name = 'Name is required.'
+    if (!form.name.trim()) errs.name = t('webhooks.validationNameRequired')
     if (!form.endpoint_url.trim()) {
-      errs.endpoint_url = 'Endpoint URL is required.'
+      errs.endpoint_url = t('webhooks.validationEndpointRequired')
     } else if (!/^https?:\/\//.test(form.endpoint_url)) {
-      errs.endpoint_url = 'URL must start with http:// or https://'
+      errs.endpoint_url = t('webhooks.validationEndpointProtocol')
     }
     setErrors(errs)
     return Object.keys(errs).length === 0
@@ -230,29 +245,29 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
         { id: editing.id, data: payload },
         {
           onSuccess: () => {
-            toast({ title: 'Webhook updated successfully', variant: 'default' })
+            toast({ title: t('webhooks.updated'), variant: 'default' })
             onOpenChange(false)
           },
           onError: () => {
-            toast({ title: 'Failed to update webhook', variant: 'destructive' })
+            toast({ title: t('webhooks.updateFailed'), variant: 'destructive' })
           },
         }
       )
     } else {
       createMutation.mutate(payload, {
         onSuccess: () => {
-          toast({ title: 'Webhook created successfully', variant: 'default' })
+          toast({ title: t('webhooks.created'), variant: 'default' })
           onOpenChange(false)
         },
         onError: () => {
-          toast({ title: 'Failed to create webhook', variant: 'destructive' })
+          toast({ title: t('webhooks.createFailed'), variant: 'destructive' })
         },
       })
     }
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending
-  const title = editing ? 'Edit Webhook' : 'New Webhook'
+  const title = editing ? t('webhooks.edit') : t('webhooks.new')
 
   const inputCls =
     'w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm'
@@ -281,11 +296,11 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {/* Name */}
             <div>
-              <label className={labelCls}>Name *</label>
+              <label className={labelCls}>{t('common.name')} *</label>
               <input
                 type="text"
                 className={inputCls}
-                placeholder="My webhook"
+                placeholder={t('webhooks.namePlaceholder')}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
@@ -294,7 +309,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
 
             {/* Event type */}
             <div>
-              <label className={labelCls}>Event Type *</label>
+              <label className={labelCls}>{t('notifications.eventType')} *</label>
               <select
                 className={inputCls}
                 value={form.event_type}
@@ -304,7 +319,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
               >
                 {EVENT_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </option>
                 ))}
               </select>
@@ -312,7 +327,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
 
             {/* Endpoint URL */}
             <div>
-              <label className={labelCls}>Endpoint URL *</label>
+              <label className={labelCls}>{t('webhooks.endpointUrl')} *</label>
               <input
                 type="text"
                 className={inputCls}
@@ -326,13 +341,13 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
             {/* Secret */}
             <div>
               <label className={labelCls}>
-                Secret{' '}
-                <span className="text-gray-400 dark:text-gray-500 font-normal">(optional)</span>
+                {t('webhooks.secret')}{' '}
+                <span className="text-gray-400 dark:text-gray-500 font-normal">({t('common.optional')})</span>
               </label>
               <input
                 type="password"
                 className={inputCls}
-                placeholder={editing ? 'Leave blank to keep existing secret' : 'Signing secret'}
+                placeholder={editing ? t('webhooks.secretKeepPlaceholder') : t('webhooks.secretPlaceholder')}
                 value={form.secret}
                 onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
                 autoComplete="new-password"
@@ -352,7 +367,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
                 htmlFor="wh-is-active"
                 className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
               >
-                Active
+                {t('common.active')}
               </label>
             </div>
 
@@ -363,7 +378,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
                   type="button"
                   className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </Dialog.Close>
               <button
@@ -371,7 +386,7 @@ function WebhookFormModal({ open, onOpenChange, editing }: WebhookFormModalProps
                 disabled={isPending}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
               >
-                {isPending ? (editing ? 'Saving...' : 'Creating...') : editing ? 'Save Changes' : 'Create Webhook'}
+                {isPending ? (editing ? t('common.saving') : t('common.creating')) : editing ? t('common.saveChanges') : t('webhooks.new')}
               </button>
             </div>
           </form>
@@ -392,18 +407,19 @@ interface WebhookCardProps {
 }
 
 function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
+  const { t } = useI18n()
   const toggleMutation = useToggleWebhook()
 
   function handleToggle() {
     toggleMutation.mutate(webhook.id, {
       onSuccess: (updated) => {
         toast({
-          title: updated.is_active ? 'Webhook activated' : 'Webhook deactivated',
+          title: updated.is_active ? t('webhooks.activated') : t('webhooks.deactivated'),
           variant: 'default',
         })
       },
       onError: () => {
-        toast({ title: 'Failed to toggle webhook', variant: 'destructive' })
+        toast({ title: t('webhooks.toggleFailed'), variant: 'destructive' })
       },
     })
   }
@@ -423,13 +439,13 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${eventTypeBadge(webhook.event_type)}`}
             >
-              {webhook.event_type_display}
+              {EVENT_TYPE_LABEL_KEYS[webhook.event_type] ? t(EVENT_TYPE_LABEL_KEYS[webhook.event_type]) : webhook.event_type_display}
             </span>
             {webhook.last_event_status && (
               <span
                 className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusBadge(webhook.last_event_status)}`}
               >
-                {webhook.last_event_status}
+                {STATUS_LABEL_KEYS[webhook.last_event_status as EventStatus] ? t(STATUS_LABEL_KEYS[webhook.last_event_status as EventStatus]) : webhook.last_event_status}
               </span>
             )}
           </div>
@@ -449,7 +465,7 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
               : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
           }`}
         >
-          {webhook.is_active ? 'Active' : 'Inactive'}
+          {webhook.is_active ? t('common.active') : t('common.inactive')}
         </span>
       </div>
 
@@ -457,9 +473,9 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
       <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
         <span className="flex items-center gap-1">
           <Activity size={12} />
-          {webhook.events_count} event{webhook.events_count !== 1 ? 's' : ''}
+          {t('webhooks.eventCount', { count: webhook.events_count, plural: webhook.events_count === 1 ? '' : 's' })}
         </span>
-        <span>Created {formatDate(webhook.created_at)}</span>
+        <span>{t('common.created')} {formatDate(webhook.created_at)}</span>
       </div>
 
       {/* Recent events */}
@@ -471,7 +487,7 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
           type="button"
           onClick={handleToggle}
           disabled={toggleMutation.isPending}
-          title={webhook.is_active ? 'Deactivate' : 'Activate'}
+          title={webhook.is_active ? t('common.deactivate') : t('common.activate')}
           className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
             webhook.is_active
               ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
@@ -480,11 +496,11 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
         >
           {webhook.is_active ? (
             <>
-              <PowerOff size={13} /> Deactivate
+              <PowerOff size={13} /> {t('common.deactivate')}
             </>
           ) : (
             <>
-              <Power size={13} /> Activate
+              <Power size={13} /> {t('common.activate')}
             </>
           )}
         </button>
@@ -494,7 +510,7 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
           onClick={() => onEdit(webhook)}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
         >
-          <Pencil size={13} /> Edit
+          <Pencil size={13} /> {t('common.edit')}
         </button>
 
         <button
@@ -502,7 +518,7 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
           onClick={() => onDelete(webhook)}
           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-colors ml-auto"
         >
-          <Trash2 size={13} /> Delete
+          <Trash2 size={13} /> {t('common.delete')}
         </button>
       </div>
     </div>
@@ -514,18 +530,20 @@ function WebhookCard({ webhook, onEdit, onDelete }: WebhookCardProps) {
 // ---------------------------------------------------------------------------
 
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
+  const { t } = useI18n()
+
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
         <Webhook className="h-8 w-8 text-gray-400 dark:text-gray-500" />
       </div>
       <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-        {hasFilters ? 'No webhooks found' : 'No webhooks yet'}
+        {hasFilters ? t('webhooks.noMatch') : t('webhooks.noWebhooks')}
       </h3>
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">
         {hasFilters
-          ? 'Try adjusting your search or filter.'
-          : 'Create your first webhook to receive real-time notifications.'}
+          ? t('webhooks.adjustFilters')
+          : t('webhooks.createFirst')}
       </p>
     </div>
   )
@@ -536,6 +554,7 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 // ---------------------------------------------------------------------------
 
 export function WebhooksPage() {
+  const { t } = useI18n()
   const [search, setSearch] = useState('')
   const [eventTypeFilter, setEventTypeFilter] = useState<EventType | 'all'>('all')
   const [formOpen, setFormOpen] = useState(false)
@@ -570,11 +589,11 @@ export function WebhooksPage() {
     if (!deleteTarget) return
     deleteMutation.mutate(deleteTarget.id, {
       onSuccess: () => {
-        toast({ title: 'Webhook deleted', variant: 'default' })
+        toast({ title: t('webhooks.deleted'), variant: 'default' })
         setDeleteTarget(null)
       },
       onError: () => {
-        toast({ title: 'Failed to delete webhook', variant: 'destructive' })
+        toast({ title: t('webhooks.deleteFailed'), variant: 'destructive' })
       },
     })
   }
@@ -586,9 +605,9 @@ export function WebhooksPage() {
       {/* Page header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Webhooks</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('webhooks.title')}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            Receive real-time HTTP callbacks when checklist events occur.
+            {t('webhooks.subtitle')}
           </p>
         </div>
         <button
@@ -597,7 +616,7 @@ export function WebhooksPage() {
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors shadow-sm"
         >
           <Plus size={16} />
-          New Webhook
+          {t('webhooks.new')}
         </button>
       </div>
 
@@ -612,7 +631,7 @@ export function WebhooksPage() {
           <input
             type="text"
             className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Search webhooks..."
+            placeholder={t('webhooks.search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -624,10 +643,10 @@ export function WebhooksPage() {
           value={eventTypeFilter}
           onChange={(e) => setEventTypeFilter(e.target.value as EventType | 'all')}
         >
-          <option value="all">All Event Types</option>
+          <option value="all">{t('webhooks.allEventTypes')}</option>
           {EVENT_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.labelKey)}
             </option>
           ))}
         </select>
@@ -666,10 +685,10 @@ export function WebhooksPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-        title="Delete Webhook"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('webhooks.deleteTitle')}
+        description={t('webhooks.deleteConfirm', { name: deleteTarget?.name ?? '—' })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         variant="destructive"
         onConfirm={confirmDelete}
       />

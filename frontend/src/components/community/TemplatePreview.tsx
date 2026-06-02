@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Download } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import type { CommunityTemplate, CommunityTemplateItem } from '@/types'
 import { StarRating } from './StarRating'
 import { AuthorProfile } from './AuthorProfile'
@@ -28,6 +29,7 @@ interface TemplatePreviewProps {
 }
 
 export function TemplatePreview({ isOpen, onClose, template, onDownload }: TemplatePreviewProps) {
+  const { t } = useI18n()
   const [isDownloading, setIsDownloading] = useState(false)
 
   if (!isOpen || !template) return null
@@ -48,7 +50,7 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
       <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Template Preview
+            {t('community.templatePreview')}
           </h2>
           <button
             onClick={onClose}
@@ -72,12 +74,12 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
                 <div className="flex items-center gap-1">
                   <StarRating rating={template.rating} size={14} />
                   <span className="text-gray-600 dark:text-gray-300">
-                    {template.rating.toFixed(1)} ({template.rating_count} reviews)
+                    {template.rating.toFixed(1)} ({t('community.reviewsCount', { count: template.rating_count })})
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-gray-400">
                   <Download size={14} />
-                  {template.download_count} downloads
+                  {t('community.downloadsCount', { count: template.download_count })}
                 </div>
               </div>
             </div>
@@ -89,7 +91,7 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
 
           <div className="mb-6">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Checklist Items ({template.items.length})
+              {t('checklistInstance.itemsCountTitle', { count: template.items.length })}
             </h4>
             <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
               {template.items.map((item: CommunityTemplateItem, index: number) => (
@@ -107,7 +109,7 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
           </div>
 
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Tags</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('checklists.tags')}</h4>
             <div className="flex flex-wrap gap-2">
               {template.tags.map((tag) => (
                 <span
@@ -126,7 +128,7 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleDownload}
@@ -134,7 +136,7 @@ export function TemplatePreview({ isOpen, onClose, template, onDownload }: Templ
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
           >
             <Download size={16} />
-            {isDownloading ? 'Downloading...' : 'Download Template'}
+            {isDownloading ? t('community.downloading') : t('community.downloadTemplate')}
           </button>
         </div>
       </div>

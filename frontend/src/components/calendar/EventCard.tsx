@@ -1,7 +1,9 @@
 import { format } from 'date-fns'
+import { de, enUS, es, fr, ru, zhCN } from 'date-fns/locale'
 import { Clock, CheckSquare, ListTodo, MoreVertical, Edit, Trash2 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import type { CalendarEvent } from '@/types'
+import { useI18n } from '@/i18n'
 
 interface EventCardProps {
   event: CalendarEvent
@@ -34,7 +36,9 @@ const eventColors: Record<string, { bg: string; border: string; text: string; in
 export function EventCard({ event, onClick, onDelete, compact = false }: EventCardProps) {
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const { language, t } = useI18n()
   const colors = eventColors[event.event_type] || eventColors.custom
+  const eventDate = formatEventDate(event.start_datetime, language)
 
   useEffect(() => {
     if (!showMenu) return
@@ -102,10 +106,10 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
                   <Clock size={12} />
                   {format(new Date(event.start_datetime), 'HH:mm')} - {format(new Date(event.end_datetime ?? event.start_datetime), 'HH:mm')}
                 </span>
-                <span>{format(new Date(event.start_datetime), 'MMM d, yyyy')}</span>
+                <span>{eventDate}</span>
               </>
             ) : (
-              <span>{format(new Date(event.start_datetime), 'MMM d, yyyy')} (All day)</span>
+              <span>{eventDate} ({t('calendar.allDay')})</span>
             )}
           </div>
         </div>
@@ -130,7 +134,7 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Edit size={14} />
-                Edit
+                {t('event.actionEdit')}
               </button>
               <button
                 onClick={(e) => {
@@ -141,7 +145,7 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
                 <Trash2 size={14} />
-                Delete
+                {t('event.actionDelete')}
               </button>
             </div>
           )}
@@ -149,6 +153,13 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
       </div>
     </div>
   )
+}
+
+const dateLocales = { en: enUS, ru, es, de, fr, zh: zhCN }
+
+function formatEventDate(date: string, language: string) {
+  const locale = dateLocales[language as keyof typeof dateLocales] ?? enUS
+  return format(new Date(date), 'PP', { locale })
 }
 
 export default EventCard

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface ItemCheckboxProps {
   content: string
@@ -25,6 +26,7 @@ export function ItemCheckbox({
   onNotesChange,
   disabled,
 }: ItemCheckboxProps) {
+  const { t } = useI18n()
   const [showNotes, setShowNotes] = useState(false)
 
   return (
@@ -108,7 +110,7 @@ export function ItemCheckbox({
               exit={{ opacity: 0, height: 0 }}
               className="mt-1 text-xs text-gray-400 dark:text-gray-500"
             >
-              Completed at {new Date(checkedAt).toLocaleString()}
+              {t('checklistInstance.completedAt', { date: new Date(checkedAt).toLocaleString() })}
             </motion.p>
           )}
         </AnimatePresence>
@@ -121,7 +123,7 @@ export function ItemCheckbox({
             }}
             className="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
-            {notes ? 'Edit notes' : 'Add notes'}
+            {notes ? t('checklistInstance.editNotes') : t('checklistInstance.addNotes')}
           </button>
         )}
 
@@ -137,7 +139,7 @@ export function ItemCheckbox({
               <textarea
                 value={notes || ''}
                 onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Add notes..."
+                placeholder={t('checklistInstance.notesPlaceholder')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={2}
               />

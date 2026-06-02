@@ -1,4 +1,5 @@
 import { User, FileText } from 'lucide-react'
+import { useI18n } from '@/i18n'
 import type { CommunityAuthor } from '@/types'
 
 interface AuthorProfileProps {
@@ -7,6 +8,7 @@ interface AuthorProfileProps {
 }
 
 export function AuthorProfile({ author, onFollow }: AuthorProfileProps) {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden">
@@ -24,14 +26,14 @@ export function AuthorProfile({ author, onFollow }: AuthorProfileProps) {
       </div>
       <div className="flex items-center gap-1 text-xs text-gray-400">
         <FileText size={12} />
-        {author.templates_count} templates
+        {t('community.templatesCount', { count: author.templates_count })}
       </div>
       {onFollow && (
         <button
           onClick={onFollow}
           className="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-600 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
         >
-          Follow
+          {t('community.follow')}
         </button>
       )}
     </div>

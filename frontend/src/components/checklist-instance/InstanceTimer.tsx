@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Play, Pause } from 'lucide-react'
+import { useI18n } from '@/i18n'
 
 interface InstanceTimerProps {
   startedAt: string | null
@@ -42,6 +43,7 @@ export function InstanceTimer({
   onResume,
   onPause,
 }: InstanceTimerProps) {
+  const { t } = useI18n()
   const initialElapsed = useMemo(
     () => calculateElapsedTime(startedAt, pausedAt, totalPauseSeconds, completedAt),
     [startedAt, pausedAt, totalPauseSeconds, completedAt]
@@ -96,7 +98,7 @@ export function InstanceTimer({
             <button
               onClick={onResume}
               className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900 transition-colors"
-              title="Resume"
+              title={t('checklistInstance.resume')}
             >
               <Play size={18} />
             </button>
@@ -104,7 +106,7 @@ export function InstanceTimer({
             <button
               onClick={onPause}
               className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900 transition-colors"
-              title="Pause"
+              title={t('status.paused')}
             >
               <Pause size={18} />
             </button>
@@ -114,13 +116,13 @@ export function InstanceTimer({
 
       {isPaused && !completedAt && (
         <span className="text-sm text-yellow-600 dark:text-yellow-400 animate-pulse">
-          Paused
+          {t('status.paused')}
         </span>
       )}
 
       {completedAt && (
         <span className="text-sm text-green-600 dark:text-green-400">
-          Completed
+          {t('status.completed')}
         </span>
       )}
     </div>

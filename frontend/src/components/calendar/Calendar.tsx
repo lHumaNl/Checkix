@@ -1,13 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Calendar, dateFnsLocalizer, Views, type NavigateAction, type View, type EventProps } from 'react-big-calendar'
-import { format, parse, startOfWeek, getDay } from 'date-fns'
-import { enUS } from 'date-fns/locale/en-US'
+import { addDays, addMonths, addWeeks, format, parse, startOfWeek, getDay } from 'date-fns'
+import { enUS, ru, es, de, fr, zhCN } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Button, Segmented, Space, Typography } from 'antd'
 import type { CalendarEvent } from '@/types'
+import { useI18n } from '@/i18n'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 const locales = {
-  'en-US': enUS,
+  en: enUS,
+  ru,
+  es,
+  de,
+  fr,
+  zh: zhCN,
 }
 
 const localizer = dateFnsLocalizer({
@@ -60,6 +67,7 @@ function EventComponent({ event, onEventClick }: EventProps<FormattedEvent> & { 
 export function CalendarView({ events, onEventClick, onCreateEvent, currentDate: externalDate, onDateChange }: Omit<CalendarViewProps, 'onEventDrop' | 'onEventResize'>) {
   const [internalDate, setInternalDate] = useState(new Date())
   const [view, setView] = useState<View>(Views.MONTH)
+  const { language, t } = useI18n()
   const currentDate = externalDate ?? internalDate
 
   const formattedEvents: FormattedEvent[] = useMemo(() => {
@@ -75,16 +83,9 @@ export function CalendarView({ events, onEventClick, onCreateEvent, currentDate:
   }, [onEventClick])
 
   const handleNavigate = (navigate: NavigateAction) => {
-    let newDate: Date
-    if (navigate === 'TODAY') {
-      newDate = new Date()
-    } else if (navigate === 'PREV') {
-      newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    } else if (navigate === 'NEXT') {
-      newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    } else {
-      return
-    }
+    const newDate = getNavigatedDate(currentDate, view, navigate)
+    if (!newDate) return
+
     if (onDateChange) {
       onDateChange(newDate)
     } else {
@@ -92,17 +93,32 @@ export function CalendarView({ events, onEventClick, onCreateEvent, currentDate:
     }
   }
 
+  const calendarMessages = useMemo(
+    () => ({
+      today: t('calendar.today'),
+      previous: t('calendar.previous'),
+      next: t('calendar.next'),
+      month: t('calendar.month'),
+      week: t('calendar.week'),
+      day: t('calendar.day'),
+      agenda: t('calendar.agenda'),
+      noEventsInRange: t('calendar.noEventsInRange'),
+      showMore: (count: number) => t('calendar.showMore', { count }),
+    }),
+    [t]
+  )
+
   return (
-    <div className="h-full bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
-      <div className="rbc-toolbar flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+    <div className="calendar-shell h-full rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            type="primary"
             onClick={() => onCreateEvent()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+            icon={<Plus size={16} />}
           >
-            <Plus size={16} />
-            New Event
-          </button>
+            {t('calendar.newEvent')}
+          </Button>
         </div>
       </div>
       <div className="h-[calc(100%-64px)]">
@@ -114,6 +130,8 @@ export function CalendarView({ events, onEventClick, onCreateEvent, currentDate:
           views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
           view={view}
           date={currentDate}
+          culture={language}
+          messages={calendarMessages}
           onView={setView}
           onNavigate={() => {}}
           components={{
@@ -139,53 +157,56 @@ interface CustomToolbarProps {
 }
 
 function CustomToolbar({ label, onNavigate, onView, view }: CustomToolbarProps) {
+  const { t } = useI18n()
   const views: { label: string; value: View }[] = [
-    { label: 'Month', value: 'month' },
-    { label: 'Week', value: 'week' },
-    { label: 'Day', value: 'day' },
-    { label: 'Agenda', value: 'agenda' },
+    { label: t('calendar.month'), value: 'month' },
+    { label: t('calendar.week'), value: 'week' },
+    { label: t('calendar.day'), value: 'day' },
+    { label: t('calendar.agenda'), value: 'agenda' },
   ]
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-gray-200 dark:border-gray-800">
-      <div className="flex items-center gap-2">
-        <button
+      <Space wrap>
+        <Button
           onClick={() => onNavigate('TODAY')}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
         >
-          Today
-        </button>
-        <button
+          {t('calendar.today')}
+        </Button>
+        <Button
+          aria-label={t('calendar.previous')}
           onClick={() => onNavigate('PREV')}
-          className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <button
+          icon={<ChevronLeft size={20} />}
+        />
+        <Button
+          aria-label={t('calendar.next')}
           onClick={() => onNavigate('NEXT')}
-          className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-        >
-          <ChevronRight size={20} />
-        </button>
-        <span className="text-lg font-semibold text-gray-900 dark:text-white ml-2">{label}</span>
-      </div>
-      <div className="flex flex-wrap items-center gap-1">
-        {views.map((v) => (
-          <button
-            key={v.value}
-            onClick={() => onView(v.value)}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              view === v.value
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
+          icon={<ChevronRight size={20} />}
+        />
+        <Typography.Title level={4} style={{ margin: '0 0 0 8px' }}>
+          {label}
+        </Typography.Title>
+      </Space>
+      <Segmented
+        value={view}
+        onChange={(value) => onView(value as View)}
+        options={views.map((viewOption) => ({
+          label: viewOption.label,
+          value: viewOption.value,
+        }))}
+      />
     </div>
   )
+}
+
+function getNavigatedDate(currentDate: Date, view: View, navigate: NavigateAction) {
+  if (navigate === 'TODAY') return new Date()
+  if (navigate !== 'PREV' && navigate !== 'NEXT') return null
+
+  const direction = navigate === 'NEXT' ? 1 : -1
+  if (view === Views.WEEK) return addWeeks(currentDate, direction)
+  if (view === Views.DAY) return addDays(currentDate, direction)
+  return addMonths(currentDate, direction)
 }
 
 export default CalendarView

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import {
   CheckCircleOutlined,
   UnorderedListOutlined,
@@ -6,11 +6,6 @@ import {
   FireOutlined,
   RiseOutlined,
   DownloadOutlined,
-  PlusOutlined,
-  CheckOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  TrophyOutlined,
 } from '@ant-design/icons'
 import {
   Row,
@@ -22,27 +17,28 @@ import {
   Spin,
   Result,
   Progress,
-  List,
   Avatar,
   Tag,
-  FloatButton,
   message,
+  Card,
+  Statistic,
 } from 'antd'
-import { ProCard, StatisticCard } from '@ant-design/pro-components'
-import { Line, Area, Heatmap as HeatmapChart } from '@ant-design/charts'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import type { Dayjs } from 'dayjs'
-import { useNavigate } from 'react-router-dom'
 import { useDashboardStats } from '@/api/useDashboardStats'
 import {
   useStatsByDateRange,
   useExportStatsCSV,
-  useCompletionChart,
-  useHeatmapData,
 } from '@/api/useCompletionData'
-import { useActivityFeed } from '@/api/useActivityFeed'
-import type { ActivityItem } from '@/types/dashboard'
+import { useI18n } from '@/i18n'
+import {
+  ActivityFeedSection,
+  ActivityHeatmapSection,
+  CompletionChartSection,
+  CompletionTrendSection,
+  QuickActionsFAB,
+} from '@/components/dashboard/DashboardSections'
 
 dayjs.extend(relativeTime)
 
@@ -54,287 +50,12 @@ function getDefaultDateRange(): [Dayjs, Dayjs] {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Inline sub-components                                             */
-/* ------------------------------------------------------------------ */
-
-/** Recent Activity list rendered with antd List */
-function ActivityFeedSection({ limit = 8 }: { limit?: number }) {
-  const { data, isLoading, error } = useActivityFeed(1, limit)
-  const activities = data?.items ?? []
-
-  const typeIconMap: Record<ActivityItem['type'], React.ReactNode> = {
-    checklist: <CheckCircleOutlined />,
-    todo: <UnorderedListOutlined />,
-    event: <CalendarOutlined />,
-    achievement: <TrophyOutlined />,
-  }
-
-  const typeColorMap: Record<ActivityItem['type'], string> = {
-    checklist: '#52c41a',
-    todo: '#1677ff',
-    event: '#722ed1',
-    achievement: '#faad14',
-  }
-
-  const actionIconMap: Record<ActivityItem['action'], React.ReactNode> = {
-    created: <PlusOutlined style={{ fontSize: 10 }} />,
-    completed: <CheckOutlined style={{ fontSize: 10 }} />,
-    updated: <EditOutlined style={{ fontSize: 10 }} />,
-    deleted: <DeleteOutlined style={{ fontSize: 10 }} />,
-  }
-
-  if (error) {
-    return (
-      <Result
-        status="warning"
-        title="Unable to load activity feed"
-        style={{ padding: 24 }}
-      />
-    )
-  }
-
-  return (
-    <List
-      loading={isLoading}
-      dataSource={activities}
-      locale={{ emptyText: 'No recent activity' }}
-      renderItem={(item: ActivityItem) => (
-        <List.Item style={{ padding: '8px 0' }}>
-          <List.Item.Meta
-            avatar={
-              <div style={{ position: 'relative' }}>
-                <Avatar
-                  icon={typeIconMap[item.type]}
-                  style={{ backgroundColor: typeColorMap[item.type] }}
-                  size={36}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    bottom: -2,
-                    right: -2,
-                    width: 16,
-                    height: 16,
-                    backgroundColor: '#fff',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 0 0 1px #d9d9d9',
-                    fontSize: 10,
-                  }}
-                >
-                  {actionIconMap[item.action]}
-                </span>
-              </div>
-            }
-            title={
-              <Text strong ellipsis style={{ maxWidth: 320 }}>
-                {item.title}
-              </Text>
-            }
-            description={item.description || undefined}
-          />
-          <Text type="secondary" style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
-            {dayjs(item.timestamp).fromNow()}
-          </Text>
-        </List.Item>
-      )}
-    />
-  )
-}
-
-/** Completion area chart using @ant-design/charts */
-function CompletionChartSection() {
-  const { data, isLoading, error } = useCompletionChart()
-
-  if (error || (!isLoading && !data)) {
-    return (
-      <Result
-        status="warning"
-        title="Unable to load chart data"
-        style={{ padding: 24 }}
-      />
-    )
-  }
-
-  const config = {
-    data: data ?? [],
-    xField: 'label',
-    yField: 'value',
-    smooth: true,
-    height: 260,
-    loading: isLoading,
-    style: {
-      fill: 'linear-gradient(-90deg, #1677ff 0%, rgba(22, 119, 255, 0.05) 100%)',
-      strokeWidth: 2,
-      stroke: '#1677ff',
-    },
-    axis: {
-      x: {
-        labelAutoRotate: false,
-      },
-    },
-    tooltip: {
-      title: 'label',
-    },
-  }
-
-  return <Area {...config} />
-}
-
-/** Completion trend line chart (Created vs Completed) */
-function CompletionTrendSection({
-  data,
-}: {
-  data: Array<{
-    date: string
-    instances_created: number
-    instances_completed: number
-  }>
-}) {
-  if (!data || data.length === 0) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: 280,
-        }}
-      >
-        <Text type="secondary">No data available for the selected range</Text>
-      </div>
-    )
-  }
-
-  const transformed = useMemo(() => {
-    const created = data.map((d) => ({
-      date: d.date,
-      value: d.instances_created,
-      type: 'Created',
-    }))
-    const completed = data.map((d) => ({
-      date: d.date,
-      value: d.instances_completed,
-      type: 'Completed',
-    }))
-    return [...created, ...completed]
-  }, [data])
-
-  const config = {
-    data: transformed,
-    xField: 'date',
-    yField: 'value',
-    colorField: 'type',
-    height: 280,
-    smooth: true,
-    color: ['#1677ff', '#52c41a'],
-    point: {
-      shapeField: 'square',
-      sizeField: 3,
-    },
-    interaction: {
-      tooltip: {
-        marker: false,
-      },
-    },
-    style: {
-      lineWidth: 2,
-    },
-  }
-
-  return <Line {...config} />
-}
-
-/** Activity heatmap using @ant-design/charts Heatmap */
-function ActivityHeatmapSection() {
-  const { data, isLoading, error } = useHeatmapData()
-
-  if (error || (!isLoading && !data)) {
-    return (
-      <Result
-        status="warning"
-        title="Unable to load heatmap data"
-        style={{ padding: 24 }}
-      />
-    )
-  }
-
-  const heatmapData = useMemo(
-    () =>
-      (data ?? []).map((d) => ({
-        date: d.date,
-        value: d.count,
-      })),
-    [data]
-  )
-
-  const config = {
-    data: heatmapData,
-    xField: 'date',
-    yField: (d: { date: string }) => {
-      const dt = dayjs(d.date)
-      return dt.day() === 0 ? 7 : dt.day()
-    },
-    colorField: 'value',
-    height: 160,
-    loading: isLoading,
-    color: {
-      type: 'sequential' as const,
-      palette: 'Blues',
-    },
-    style: {
-      maxWidth: 12,
-      maxHeight: 12,
-      inset: 1,
-      radius: 2,
-    },
-    axis: {
-      x: {
-        labelFormatter: (d: string) => dayjs(d).format('MMM'),
-      },
-      y: {
-        labelFormatter: (d: number) => {
-          const days = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-          return days[d] || ''
-        },
-      },
-    },
-    tooltip: {
-      title: (d: { date: string; value: number }) =>
-        `${d.date}: ${d.value} activities`,
-    },
-  }
-
-  return <HeatmapChart {...config} />
-}
-
-/** Quick Actions FAB using antd FloatButton.Group */
-function QuickActionsFAB() {
-  const navigate = useNavigate()
-
-  return (
-    <FloatButton.Group
-      trigger="click"
-      type="primary"
-      icon={<PlusOutlined />}
-      tooltip="Quick actions"
-      style={{ right: 24, bottom: 24 }}
-    >
-      <FloatButton icon={<CheckCircleOutlined />} tooltip="New Checklist" onClick={() => navigate('/checklists')} />
-      <FloatButton icon={<UnorderedListOutlined />} tooltip="New Todo" onClick={() => navigate('/todos')} />
-      <FloatButton icon={<CalendarOutlined />} tooltip="New Event" onClick={() => navigate('/calendar')} />
-    </FloatButton.Group>
-  )
-}
-
-/* ------------------------------------------------------------------ */
 /*  Main DashboardPage                                                */
 /* ------------------------------------------------------------------ */
 
 export function DashboardPage() {
   const { data: stats, isLoading, error } = useDashboardStats()
+  const { t } = useI18n()
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(
     () => getDefaultDateRange()
   )
@@ -351,8 +72,8 @@ export function DashboardPage() {
     exportCSV.mutate(
       { startDate, endDate },
       {
-        onSuccess: () => messageApi.success('Stats exported successfully'),
-        onError: () => messageApi.error('Export failed'),
+        onSuccess: () => messageApi.success(t('dashboard.exportSuccess')),
+        onError: () => messageApi.error(t('dashboard.exportError')),
       }
     )
   }
@@ -367,7 +88,7 @@ export function DashboardPage() {
           minHeight: 480,
         }}
       >
-        <Spin size="large" tip="Loading dashboard...">
+        <Spin size="large" tip={t('dashboard.loading')}>
           <div style={{ padding: 50 }} />
         </Spin>
       </div>
@@ -378,8 +99,8 @@ export function DashboardPage() {
     return (
       <Result
         status="warning"
-        title="Unable to load dashboard"
-        subTitle="Please try refreshing the page"
+        title={t('dashboard.errorTitle')}
+        subTitle={t('dashboard.errorSubtitle')}
         style={{ padding: 48 }}
       />
     )
@@ -403,14 +124,14 @@ export function DashboardPage() {
       {contextHolder}
 
       {/* ---- Header ---- */}
-      <ProCard style={{ marginBottom: 16 }} bodyStyle={{ padding: '16px 24px' }}>
+      <Card style={{ marginBottom: 16 }} styles={{ body: { padding: '16px 24px' } }}>
         <Row justify="space-between" align="middle" gutter={[16, 12]}>
           <Col xs={24} sm={16}>
             <Title level={3} style={{ margin: 0 }}>
-              Dashboard
+              {t('dashboard.title')}
             </Title>
             <Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
-              Welcome back! Here&apos;s your overview.
+              {t('dashboard.subtitle')}
             </Paragraph>
           </Col>
           <Col xs={24} sm={24}>
@@ -431,142 +152,140 @@ export function DashboardPage() {
                 onClick={handleExport}
                 loading={exportCSV.isPending}
               >
-                Export CSV
+                {t('dashboard.exportCsv')}
               </Button>
             </Space>
           </Col>
         </Row>
-      </ProCard>
+      </Card>
 
       {/* ---- Stats Row ---- */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} lg={6}>
-          <StatisticCard style={{ height: '100%' }}
-            statistic={{
-              title: 'Completed Checklists',
-              value: stats.completed_checklists ?? stats.completed_today ?? 0,
-              icon: (
+          <Card style={{ height: '100%' }}>
+            <Statistic
+              title={t('dashboard.completedChecklists')}
+              value={stats.completed_checklists ?? stats.completed_today ?? 0}
+              prefix={
                 <Avatar
                   style={{ backgroundColor: '#f6ffed' }}
                   icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
                   size={44}
                 />
-              ),
-              description: (
-                <Space size={4}>
-                  <Tag
-                    color={(stats.weekly_change ?? 0) >= 0 ? 'success' : 'error'}
-                  >
-                    {(stats.weekly_change ?? 0) >= 0 ? '+' : ''}
-                    {stats.weekly_change ?? 0}%
-                  </Tag>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    vs last week
-                  </Text>
-                </Space>
-              ),
-            }}
-          />
+              }
+            />
+            <Space size={4} style={{ marginTop: 8 }}>
+              <Tag color={(stats.weekly_change ?? 0) >= 0 ? 'success' : 'error'}>
+                {(stats.weekly_change ?? 0) >= 0 ? '+' : ''}
+                {stats.weekly_change ?? 0}%
+              </Tag>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('dashboard.vsLastWeek')}
+              </Text>
+            </Space>
+          </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatisticCard style={{ height: '100%' }}
-            statistic={{
-              title: 'Total Todos',
-              value: stats.total_todos ?? 0,
-              icon: (
+          <Card style={{ height: '100%' }}>
+            <Statistic
+              title={t('dashboard.totalTodos')}
+              value={stats.total_todos ?? 0}
+              prefix={
                 <Avatar
                   style={{ backgroundColor: '#e6f4ff' }}
                   icon={<UnorderedListOutlined style={{ color: '#1677ff' }} />}
                   size={44}
                 />
-              ),
-              description: (
-                <Space size={4}>
-                  <Tag color="processing">+8%</Tag>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    vs last week
-                  </Text>
-                </Space>
-              ),
-            }}
-          />
+              }
+            />
+            <Space size={4} style={{ marginTop: 8 }}>
+              <Tag color="processing">+8%</Tag>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('dashboard.vsLastWeek')}
+              </Text>
+            </Space>
+          </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatisticCard style={{ height: '100%' }}
-            statistic={{
-              title: 'Upcoming Events',
-              value: stats.upcoming_events ?? stats.overdue_instances ?? 0,
-              icon: (
+          <Card style={{ height: '100%' }}>
+            <Statistic
+              title={t('dashboard.upcomingEvents')}
+              value={stats.upcoming_events ?? stats.overdue_instances ?? 0}
+              prefix={
                 <Avatar
                   style={{ backgroundColor: '#f9f0ff' }}
                   icon={<CalendarOutlined style={{ color: '#722ed1' }} />}
                   size={44}
                 />
-              ),
-            }}
-          />
+              }
+            />
+          </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <StatisticCard style={{ height: '100%' }}
-            statistic={{
-              title: 'Current Streak',
-              value: stats.streak_days ?? stats.active_instances ?? 0,
-              suffix: 'days',
-              icon: (
+          <Card style={{ height: '100%' }}>
+            <Statistic
+              title={t('dashboard.currentStreak')}
+              value={stats.streak_days ?? stats.active_instances ?? 0}
+              suffix={t('dashboard.days')}
+              prefix={
                 <Avatar
                   style={{ backgroundColor: '#fff7e6' }}
                   icon={<FireOutlined style={{ color: '#fa8c16' }} />}
                   size={44}
                 />
-              ),
-              description: (
-                <Space size={4}>
-                  <Tag color="warning">+5%</Tag>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    vs last week
-                  </Text>
-                </Space>
-              ),
-            }}
-          />
+              }
+            />
+            <Space size={4} style={{ marginTop: 8 }}>
+              <Tag color="warning">+5%</Tag>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('dashboard.vsLastWeek')}
+              </Text>
+            </Space>
+          </Card>
         </Col>
       </Row>
 
       {/* ---- Charts Row 1 ---- */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={12}>
-          <ProCard
+          <Card
             title={
               <Space>
                 <RiseOutlined />
-                <span>Completion Trends</span>
+                <span>{t('dashboard.completionTrends')}</span>
               </Space>
             }
             style={{ height: '100%' }}
           >
             <CompletionChartSection />
-          </ProCard>
+          </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <ProCard title="Completion Trend" style={{ height: '100%' }}>
+          <Card title={t('dashboard.completionTrend')} style={{ height: '100%' }}>
             <CompletionTrendSection data={trendData ?? []} />
-          </ProCard>
+          </Card>
         </Col>
       </Row>
 
       {/* ---- Charts Row 2 ---- */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={12}>
-          <ProCard
-            title="Activity Heatmap"
-            subTitle="Your activity over the last year"
+          <Card
+            title={(
+              <Space direction="vertical" size={0}>
+                <span>{t('dashboard.activityHeatmap')}</span>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('dashboard.activitySubtitle')}
+                </Text>
+              </Space>
+            )}
             style={{ height: '100%' }}
           >
             <ActivityHeatmapSection />
-          </ProCard>
+          </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <ProCard title="Progress Overview" style={{ height: '100%' }}>
+          <Card title={t('dashboard.progressOverview')} style={{ height: '100%' }}>
             <Row
               justify="center"
               align="middle"
@@ -585,7 +304,7 @@ export function DashboardPage() {
                   )}
                 />
                 <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">Checklists</Text>
+                  <Text type="secondary">{t('dashboard.checklists')}</Text>
                 </div>
               </Col>
               <Col style={{ textAlign: 'center' }}>
@@ -600,7 +319,7 @@ export function DashboardPage() {
                   )}
                 />
                 <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">Todos</Text>
+                  <Text type="secondary">{t('dashboard.todos')}</Text>
                 </div>
               </Col>
               <Col style={{ textAlign: 'center' }}>
@@ -615,18 +334,18 @@ export function DashboardPage() {
                   )}
                 />
                 <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">Overall</Text>
+                  <Text type="secondary">{t('dashboard.overall')}</Text>
                 </div>
               </Col>
             </Row>
-          </ProCard>
+          </Card>
         </Col>
       </Row>
 
       {/* ---- Recent Activity ---- */}
-      <ProCard title="Recent Activity" style={{ marginBottom: 16 }}>
+      <Card title={t('dashboard.recentActivity')} style={{ marginBottom: 16 }}>
         <ActivityFeedSection limit={8} />
-      </ProCard>
+      </Card>
 
       {/* ---- Quick Actions FAB ---- */}
       <QuickActionsFAB />

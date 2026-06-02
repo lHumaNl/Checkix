@@ -1,9 +1,11 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { ReactElement, ReactNode } from 'react'
 import { render } from '@testing-library/react'
 import type { RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { I18nProvider } from '@/i18n'
 
 function createTestQueryClient() {
   return new QueryClient({
@@ -30,9 +32,11 @@ export function AllProviders({ children, queryClient }: AllProvidersProps) {
   return (
     <QueryClientProvider client={client}>
       <BrowserRouter>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </I18nProvider>
       </BrowserRouter>
     </QueryClientProvider>
   )

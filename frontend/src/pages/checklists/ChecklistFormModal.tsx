@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm, useFieldArray, type UseFormRegister, type FieldErrors } from 'react-hook-form'
+import { useForm, useFieldArray, useWatch, type UseFormRegister, type FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
@@ -11,29 +11,39 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toast } from '@/hooks/useToast'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import type { ChecklistItem, ChecklistTemplate } from '@/types'
 
 interface ChecklistVersionDetail {
   items?: ChecklistItem[]
 }
 
-const schema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().nullable(),
-  category: z.string().nullable(),
-  tags: z.array(z.string()),
-  folder_id: z.number().nullable(),
-  execution_mode: z.enum(['sequential', 'free_order']),
-  status: z.enum(['draft', 'active', 'archived']),
-  items: z.array(z.object({
-    content: z.string(),
-    description: z.string().nullable(),
-    is_required: z.boolean(),
-    estimated_time_seconds: z.number().nullable(),
-  })),
-})
+const statusLabelKeys = {
+  draft: 'status.draft',
+  active: 'status.active',
+  archived: 'status.archived',
+} as const satisfies Record<'draft' | 'active' | 'archived', MessageKey>
 
-type FormData = z.infer<typeof schema>
+function createSchema(titleRequiredMessage: string) {
+  return z.object({
+    title: z.string().min(1, titleRequiredMessage),
+    description: z.string().nullable(),
+    category: z.string().nullable(),
+    tags: z.array(z.string()),
+    folder_id: z.number().nullable(),
+    execution_mode: z.enum(['sequential', 'free_order']),
+    status: z.enum(['draft', 'active', 'archived']),
+    items: z.array(z.object({
+      content: z.string(),
+      description: z.string().nullable(),
+      is_required: z.boolean(),
+      estimated_time_seconds: z.number().nullable(),
+    })),
+  })
+}
+
+type FormData = z.infer<ReturnType<typeof createSchema>>
 
 interface ChecklistFormModalProps {
   onClose: () => void
@@ -41,13 +51,14 @@ interface ChecklistFormModalProps {
 }
 
 export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalProps) {
+  const { t } = useI18n()
   const isEdit = !!checklist
   const createChecklist = useCreateChecklist()
   const updateChecklist = useUpdateChecklist()
   const { data: folders = [] } = useFolders()
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const { register, control, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(createSchema(t('checklists.validationTitleRequired'))),
     defaultValues: isEdit
       ? {
           title: checklist.title || checklist.name,
@@ -123,12 +134,12 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
          },
         {
           onSuccess: () => {
-            toast({ title: 'Checklist updated successfully' })
+            toast({ title: t('checklists.updatedSuccess') })
             onClose()
           },
           onError: (error: unknown) => {
             console.error('Failed to update checklist:', error)
-            toast({ title: 'Failed to update checklist', variant: 'destructive' })
+            toast({ title: t('checklists.updateFailed'), variant: 'destructive' })
           },
         }
       )
@@ -146,12 +157,12 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
         },
         {
           onSuccess: () => {
-            toast({ title: 'Checklist created successfully' })
+            toast({ title: t('checklists.createdSuccess') })
             onClose()
           },
           onError: (error: unknown) => {
             console.error('Failed to create checklist:', error)
-            toast({ title: 'Failed to create checklist', variant: 'destructive' })
+            toast({ title: t('checklists.createFailed'), variant: 'destructive' })
           },
         }
       )
@@ -161,7 +172,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
   const isPending = isEdit ? updateChecklist.isPending : createChecklist.isPending
 
   const [tagInput, setTagInput] = useState('')
-  const tags = watch('tags')
+  const tags = useWatch({ control, name: 'tags' }) ?? []
 
   const addTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -182,10 +193,10 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <div>
               <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-                {isEdit ? 'Edit Checklist' : 'Create Checklist'}
+                {isEdit ? t('checklists.editTitle') : t('checklists.createTitle')}
               </Dialog.Title>
               <Dialog.Description className="text-sm text-gray-500 dark:text-gray-400">
-                {isEdit ? 'Update the checklist details below.' : 'Fill in the details to create a new checklist.'}
+                {isEdit ? t('checklists.editDescription') : t('checklists.createDescription')}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -199,12 +210,12 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Title *
+                  {t('checklists.titleLabel')} *
                 </label>
                 <input
                   {...register('title')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Checklist title"
+                  placeholder={t('checklists.titlePlaceholder')}
                 />
                 {errors.title && (
                   <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
@@ -213,20 +224,20 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
+                  {t('checklists.description')}
                 </label>
                 <textarea
                   {...register('description')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={2}
-                  placeholder="Optional description"
+                  placeholder={t('checklists.optionalDescription')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Folder
+                    {t('checklists.folder')}
                   </label>
                   <select
                     {...register('folder_id', {
@@ -234,7 +245,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                     })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">No folder</option>
+                    <option value="">{t('checklists.noFolder')}</option>
                     {folders.map(folder => (
                       <option key={folder.id} value={folder.id}>
                         {folder.name}
@@ -245,21 +256,21 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Execution Mode
+                    {t('checklists.executionMode')}
                   </label>
                   <select
                     {...register('execution_mode')}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="free_order">Free Order</option>
-                    <option value="sequential">Sequential</option>
+                    <option value="free_order">{t('checklists.freeOrder')}</option>
+                    <option value="sequential">{t('checklists.sequential')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Tags
+                  {t('checklists.tags')}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {tags.map(tag => (
@@ -285,14 +296,14 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Add tag"
+                    placeholder={t('checklists.addTag')}
                   />
                   <button
                     type="button"
                     onClick={addTag}
                     className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
                   >
-                    Add
+                    {t('common.add')}
                   </button>
                 </div>
               </div>
@@ -300,7 +311,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Items *
+                    {t('checklists.items')} *
                   </label>
                   <button
                     type="button"
@@ -308,7 +319,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                     className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900"
                   >
                     <Plus size={14} />
-                    Add Item
+                    {t('checklists.addItem')}
                   </button>
                 </div>
 
@@ -332,7 +343,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
+                  {t('common.status')}
                 </label>
                 <div className="flex gap-4">
                   {(['draft', 'active', 'archived'] as const).map(status => (
@@ -343,7 +354,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                         value={status}
                         className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{status}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t(statusLabelKeys[status])}</span>
                     </label>
                   ))}
                 </div>
@@ -356,7 +367,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                 onClick={onClose}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -364,8 +375,8 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {isEdit
-                  ? (isPending ? 'Saving...' : 'Save Changes')
-                  : (isPending ? 'Creating...' : 'Create Checklist')}
+                  ? (isPending ? t('common.saving') : t('common.saveChanges'))
+                  : (isPending ? t('common.creating') : t('checklists.createTitle'))}
               </button>
             </div>
           </form>
@@ -391,6 +402,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ id, index, register, remove, errors }: SortableItemProps) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
 
   const style = {
@@ -418,7 +430,7 @@ function SortableItem({ id, index, register, remove, errors }: SortableItemProps
       <div className="flex-1 space-y-2">
         <input
           {...register(`items.${index}.content`)}
-          placeholder="Item content"
+          placeholder={t('checklists.itemContent')}
           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {errors?.content?.message && (
@@ -426,7 +438,7 @@ function SortableItem({ id, index, register, remove, errors }: SortableItemProps
         )}
         <input
           {...register(`items.${index}.description`)}
-          placeholder="Optional description"
+          placeholder={t('checklists.optionalDescription')}
           className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -438,7 +450,7 @@ function SortableItem({ id, index, register, remove, errors }: SortableItemProps
             {...register(`items.${index}.is_required`)}
             className="w-3 h-3 rounded border-gray-300 text-blue-600"
           />
-          Required
+          {t('checklists.required')}
         </label>
       </div>
 

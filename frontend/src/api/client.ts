@@ -1,7 +1,10 @@
 import axios, { AxiosError } from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
+import { toast } from '@/hooks/useToast'
+import { messages, type MessageLanguage } from '@/i18n/messages'
 
 const baseURL = '/api'
+const fallbackLanguage: MessageLanguage = 'en'
 
 // SECURITY: Access token is stored in memory (not localStorage) to reduce XSS risk.
 // Only the refresh token is persisted in localStorage for session continuity.
@@ -21,6 +24,12 @@ const client = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+function getCurrentLanguage(): MessageLanguage {
+  if (typeof localStorage === 'undefined') return fallbackLanguage
+  const language = localStorage.getItem('language')?.split('-')[0]
+  return language && language in messages ? (language as MessageLanguage) : fallbackLanguage
+}
 
 client.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -103,8 +112,7 @@ client.interceptors.response.use(
     }
 
     if (error.response?.status && error.response.status >= 500) {
-      const { toast } = await import('@/hooks/useToast')
-      toast({ title: 'Server error. Please try again later.', variant: 'destructive' })
+      toast({ title: messages[getCurrentLanguage()]['common.serverError'], variant: 'destructive' })
     }
 
     return Promise.reject(error)

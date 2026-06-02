@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/mocks/server'
+import { I18nProvider } from '@/i18n'
 
 const createWrapper = (initialRoute = '/login') => {
   const queryClient = new QueryClient({
@@ -20,7 +21,9 @@ const createWrapper = (initialRoute = '/login') => {
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialRoute]}>
-        <AuthProvider>{children}</AuthProvider>
+        <I18nProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </I18nProvider>
       </MemoryRouter>
     </QueryClientProvider>
   )
@@ -43,6 +46,24 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+    expect(screen.getByTestId('language-select')).toBeInTheDocument()
+  })
+
+  it('updates login copy and persists language before authentication', async () => {
+    const user = userEvent.setup()
+    const Wrapper = createWrapper()
+
+    render(
+      <Wrapper>
+        <LoginPage />
+      </Wrapper>
+    )
+
+    await user.selectOptions(screen.getByTestId('language-select'), 'es')
+
+    expect(localStorage.getItem('language')).toBe('es')
+    expect(screen.getByText('Inicia sesión en tu cuenta')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /iniciar sesión/i })).toBeInTheDocument()
   })
 
   it('renders Checkix title', () => {
@@ -102,12 +123,14 @@ describe('LoginPage', () => {
     render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/login']}>
-          <AuthProvider>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/" element={<div>Dashboard</div>} />
-            </Routes>
-          </AuthProvider>
+          <I18nProvider>
+            <AuthProvider>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/" element={<div>Dashboard</div>} />
+              </Routes>
+            </AuthProvider>
+          </I18nProvider>
         </MemoryRouter>
       </QueryClientProvider>
     )

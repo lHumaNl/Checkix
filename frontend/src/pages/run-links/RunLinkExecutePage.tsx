@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Play, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react'
+import { isAxiosError } from 'axios'
 import { useExecuteRunLink } from '@/api/useRunLinks'
+
+const getErrorMessage = (error: unknown) => {
+  if (isAxiosError<{ error?: string }>(error)) {
+    return error.response?.data?.error ?? 'Failed to execute run link'
+  }
+
+  return 'Failed to execute run link'
+}
 
 export function RunLinkExecutePage() {
   const { uniqueId } = useParams<{ uniqueId: string }>()
@@ -42,9 +51,7 @@ export function RunLinkExecutePage() {
     )
   }
 
-  const errorMessage = executeRunLink.error
-    ? ((executeRunLink.error as any)?.response?.data?.error || 'Failed to execute run link')
-    : null
+  const errorMessage = executeRunLink.error ? getErrorMessage(executeRunLink.error) : null
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">

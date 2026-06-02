@@ -18,6 +18,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { ChecklistTemplate } from '@/types'
+import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 import { KanbanColumn } from './KanbanColumn'
 import { SortableChecklistCard, ChecklistCard } from './SortableChecklistCard'
 
@@ -31,10 +33,10 @@ interface KanbanBoardProps {
 }
 
 const columns = [
-  { id: 'draft', title: 'Draft', color: 'bg-gray-500' },
-  { id: 'active', title: 'Active', color: 'bg-green-500' },
-  { id: 'archived', title: 'Archived', color: 'bg-orange-500' },
-]
+  { id: 'draft', titleKey: 'status.draft', color: 'bg-gray-500' },
+  { id: 'active', titleKey: 'status.active', color: 'bg-green-500' },
+  { id: 'archived', titleKey: 'status.archived', color: 'bg-orange-500' },
+] as const satisfies Array<{ id: 'draft' | 'active' | 'archived'; titleKey: MessageKey; color: string }>
 
 export function KanbanBoard({
   checklists,
@@ -44,6 +46,7 @@ export function KanbanBoard({
   selectedIds = [],
   onSelect,
 }: KanbanBoardProps) {
+  const { t } = useI18n()
   const [items, setItems] = useState(() => ({
     draft: checklists.filter(c => c.status === 'draft'),
     active: checklists.filter(c => c.status === 'active'),
@@ -175,7 +178,7 @@ export function KanbanBoard({
           <KanbanColumn
             key={column.id}
             id={column.id}
-            title={column.title}
+            title={t(column.titleKey)}
             color={column.color}
             items={items[column.id as keyof typeof items]}
           >

@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      uncontrollable: path.resolve(__dirname, './src/vendor/uncontrollableCompat.ts'),
     },
   },
   server: {
@@ -18,6 +19,21 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined
+          if (id.includes('/react-big-calendar') || id.includes('/date-fns')) return 'calendar'
+          if (id.includes('/react-dom') || id.includes('/scheduler')) return 'react-dom'
+          if (id.includes('/react-router')) return 'react-router'
+          if (id.includes('/react/')) return 'react'
+          if (id.includes('/axios') || id.includes('/@tanstack/react-query')) return 'data'
+          return undefined
+        },
       },
     },
   },
