@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const AUTH_FILE = 'e2e/.auth/user.json'
+const baseURL = process.env.E2E_BASE_URL || 'http://localhost:5173'
+const shouldStartDevServer = !process.env.E2E_BASE_URL
 
 export default defineConfig({
   testDir: './e2e/tests',
@@ -15,7 +17,7 @@ export default defineConfig({
   },
   globalSetup: './e2e/global-setup.ts',
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
+    baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -34,10 +36,14 @@ export default defineConfig({
         ]
       : []),
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  ...(shouldStartDevServer
+    ? {
+        webServer: {
+          command: 'npm run dev',
+          url: 'http://localhost:5173',
+          reuseExistingServer: true,
+          timeout: 120_000,
+        },
+      }
+    : {}),
 })
