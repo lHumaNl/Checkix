@@ -434,6 +434,8 @@ export const messageCatalog = {
   'stats.date': { en: 'Date', ru: 'Дата', es: 'Fecha', de: 'Datum', fr: 'Date', zh: '日期' },
   'stats.created': { en: 'Created', ru: 'Создано', es: 'Creadas', de: 'Erstellt', fr: 'Créé', zh: '已创建' },
   'stats.rate': { en: 'Rate', ru: 'Доля', es: 'Tasa', de: 'Rate', fr: 'Taux', zh: '比率' },
+  'stats.runs': { en: '{count} runs', ru: 'Запусков: {count}', es: '{count} ejecuciones', de: '{count} Läufe', fr: '{count} exécutions', zh: '{count} 次运行' },
+  'stats.uncategorized': { en: 'Uncategorized', ru: 'Без категории', es: 'Sin categoría', de: 'Nicht kategorisiert', fr: 'Non catégorisé', zh: '未分类' },
   'profile.title': { en: 'My Profile', ru: 'Мой профиль', es: 'Mi perfil', de: 'Mein Profil', fr: 'Mon profil', zh: '我的个人资料' },
   'profile.subtitle': { en: 'Manage your personal information and account settings.', ru: 'Управляйте личными данными и настройками аккаунта.', es: 'Gestiona tu información personal y la configuración de la cuenta.', de: 'Verwalte deine persönlichen Daten und Kontoeinstellungen.', fr: 'Gérez vos informations personnelles et paramètres de compte.', zh: '管理你的个人信息和账户设置。' },
   'profile.personalInfo': { en: 'Personal Information', ru: 'Личная информация', es: 'Información personal', de: 'Persönliche Informationen', fr: 'Informations personnelles', zh: '个人信息' },

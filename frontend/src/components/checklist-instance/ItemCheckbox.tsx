@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check } from 'lucide-react'
+import { Button, Checkbox, Input, Tag } from 'antd'
 import { useI18n } from '@/i18n'
 
 interface ItemCheckboxProps {
@@ -42,32 +42,16 @@ export function ItemCheckbox({
         if (!disabled) onToggle()
       }}
     >
-      <motion.button
-        type="button"
+      <motion.div
         onPointerDown={(e) => {
           e.stopPropagation()
           if (!disabled) onToggle()
         }}
         whileTap={{ scale: 0.9 }}
-        className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-          isChecked
-            ? 'bg-green-500 border-green-500 text-white'
-            : 'border-gray-300 dark:border-gray-600 group-hover:border-green-400'
-        }`}
+        className="flex-shrink-0 pt-0.5"
       >
-        <AnimatePresence>
-          {isChecked && (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Check size={14} strokeWidth={3} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
+        <Checkbox checked={isChecked} disabled={disabled} onChange={() => undefined} />
+      </motion.div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -88,7 +72,7 @@ export function ItemCheckbox({
             {content}
           </motion.p>
           {isRequired && (
-            <span className="text-xs text-red-500">*</span>
+            <Tag color="red" className="m-0 text-xs">{t('checklists.required')}</Tag>
           )}
         </div>
 
@@ -116,15 +100,18 @@ export function ItemCheckbox({
         </AnimatePresence>
 
         {onNotesChange && (
-          <button
+          <Button
             onClick={(e) => {
               e.stopPropagation()
               setShowNotes(!showNotes)
             }}
-            className="mt-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            onPointerDown={(e) => e.stopPropagation()}
+            size="small"
+            type="link"
+            className="mt-1 h-auto p-0 text-xs"
           >
             {notes ? t('checklistInstance.editNotes') : t('checklistInstance.addNotes')}
-          </button>
+          </Button>
         )}
 
         <AnimatePresence>
@@ -135,12 +122,12 @@ export function ItemCheckbox({
               exit={{ opacity: 0, height: 0 }}
               className="mt-2"
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
-              <textarea
+              <Input.TextArea
                 value={notes || ''}
                 onChange={(e) => onNotesChange(e.target.value)}
                 placeholder={t('checklistInstance.notesPlaceholder')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 rows={2}
               />
             </motion.div>

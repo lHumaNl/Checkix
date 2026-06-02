@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Search, Grid, List } from 'lucide-react'
+import { Card, Empty, Input, List as AntList, Segmented, Skeleton } from 'antd'
+import { Grid, List } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
 import type { CommunityTemplate } from '@/types'
@@ -39,6 +40,17 @@ export function TemplateMarketplace({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const categoryOptions = categories.map(category => ({ ...category, label: t(category.labelKey) }))
+  const viewOptions = [
+    {
+      value: 'grid',
+      label: <span className="inline-flex min-h-[28px] items-center"><Grid size={18} /></span>,
+    },
+    {
+      value: 'list',
+      label: <span className="inline-flex min-h-[28px] items-center"><List size={18} /></span>,
+    },
+  ]
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch =
@@ -56,63 +68,34 @@ export function TemplateMarketplace({
         onTemplateClick={onTemplateClick}
       />
 
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder={t('community.searchTemplates')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === 'grid'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-              }`}
-            >
-              <Grid size={20} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
-              }`}
-            >
-              <List size={20} />
-            </button>
-          </div>
+      <Card className="shadow-sm" styles={{ body: { padding: 16 } }}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <Input.Search
+            allowClear
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            onSearch={setSearchQuery}
+            placeholder={t('community.searchTemplates')}
+            className="w-full lg:max-w-xl"
+          />
+          <Segmented
+            value={viewMode}
+            onChange={(value) => setViewMode(value as 'grid' | 'list')}
+            options={viewOptions}
+          />
         </div>
 
         <CategoryFilter
-          categories={categories.map(category => ({ ...category, label: t(category.labelKey) }))}
+          categories={categoryOptions}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
         />
-      </div>
+      </Card>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 animate-pulse">
-              <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-md mb-4" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4 mb-2" />
-              <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
-            </div>
-          ))}
-        </div>
+        <TemplateSkeletonGrid />
       ) : filteredTemplates.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400">{t('community.noTemplates')}</p>
-        </div>
+        <Card><Empty description={t('community.noTemplates')} image={Empty.PRESENTED_IMAGE_SIMPLE} /></Card>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredTemplates.map((template) => (
@@ -125,18 +108,34 @@ export function TemplateMarketplace({
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
-          {filteredTemplates.map((template) => (
-            <TemplateCard
-              key={template.id}
-              template={template}
-              onClick={() => onTemplateClick(template)}
-              onDownload={() => onDownload(template)}
-              variant="list"
-            />
-          ))}
-        </div>
+        <AntList
+          dataSource={filteredTemplates}
+          split={false}
+          className="space-y-2"
+          renderItem={(template) => (
+            <AntList.Item className="block border-0 p-0">
+              <TemplateCard
+                template={template}
+                onClick={() => onTemplateClick(template)}
+                onDownload={() => onDownload(template)}
+                variant="list"
+              />
+            </AntList.Item>
+          )}
+        />
       )}
+    </div>
+  )
+}
+
+function TemplateSkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }, (_, index) => (
+        <Card key={index} className="shadow-sm">
+          <Skeleton active avatar paragraph={{ rows: 3 }} />
+        </Card>
+      ))}
     </div>
   )
 }

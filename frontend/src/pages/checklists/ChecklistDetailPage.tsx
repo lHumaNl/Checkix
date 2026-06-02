@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useParams, Link, useNavigate, Navigate } from 'react-router-dom'
+import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Button, Card, Descriptions, Dropdown, Flex, List, Modal, Space, Statistic, Tag, Typography } from 'antd'
+import type { DescriptionsProps, MenuProps } from 'antd'
 import {
   ArrowLeft,
   Play,
@@ -11,40 +13,80 @@ import {
   Folder,
   Clock,
   CheckSquare,
-  Tag as TagIcon,
+  Tags,
 } from 'lucide-react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useChecklist, useDeleteChecklist, useDuplicateChecklist } from '@/api/useChecklists'
 import { useCreateChecklistInstance } from '@/api/useChecklistInstances'
-import { TagPills } from '@/components/checklists/TagPills'
 import { ChecklistFormModal } from './ChecklistFormModal'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { ChecklistDetailSkeleton } from '@/components/skeletons/ChecklistDetailSkeleton'
-import type { ChecklistItem } from '@/types'
+import type { ChecklistItem, ChecklistTemplate } from '@/types'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
+
+const { Paragraph, Text, Title } = Typography
+
+const CARD_BODY_STYLE = { padding: 20 }
+
+type ChecklistStatus = ChecklistTemplate['status']
+type Translate = (key: MessageKey, values?: Record<string, string | number>) => string
+type DescriptionItems = NonNullable<DescriptionsProps['items']>
 
 interface ChecklistVersionDetail {
   items?: ChecklistItem[]
 }
 
 const statusColors = {
-  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-  archived: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
-}
+  draft: 'default',
+  active: 'success',
+  archived: 'orange',
+} satisfies Record<ChecklistStatus, string>
 
 const statusLabelKeys = {
   draft: 'status.draft',
   active: 'status.active',
   archived: 'status.archived',
-} satisfies Record<keyof typeof statusColors, MessageKey>
+} satisfies Record<ChecklistStatus, MessageKey>
 
 const executionModeLabelKeys = {
   sequential: 'checklists.sequential',
   free_order: 'checklists.freeOrder',
 } satisfies Record<string, MessageKey>
+
+function getChecklistItems(checklist: ChecklistTemplate) {
+  const version = checklist.current_version as ChecklistVersionDetail | number | null | undefined
+  const versionItems = typeof version === 'object' ? version?.items ?? [] : []
+  return versionItems.length > 0 ? versionItems : checklist.items ?? []
+}
+
+function ChecklistItemRow({ index, item, t }: { index: number; item: ChecklistItem; t: Translate }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
+      <List.Item className="rounded-lg bg-gray-50 px-3 py-3 dark:bg-gray-800/50">
+        <Flex align="flex-start" gap={12} className="w-full">
+          <Tag className="mt-0 min-w-8 text-center">{index + 1}</Tag>
+          <Space direction="vertical" size={2} className="min-w-0 flex-1">
+            <Space size={6} wrap>
+              <Text strong>{item.title || item.content}</Text>
+              {item.is_required && <Tag color="red">{t('common.required')}</Tag>}
+            </Space>
+            {item.description && <Text type="secondary">{item.description}</Text>}
+          </Space>
+        </Flex>
+      </List.Item>
+    </motion.div>
+  )
+}
+
+function TagSection({ tags, t }: { tags: string[]; t: Translate }) {
+  return (
+    <Card title={<Space><Tags size={16} />{t('checklists.tags')}</Space>} styles={{ body: CARD_BODY_STYLE }}>
+      <Space size={[4, 8]} wrap>
+        {tags.map((tag) => <Tag key={tag} color="blue">{tag}</Tag>)}
+      </Space>
+    </Card>
+  )
+}
 
 export function ChecklistDetailPage() {
   const { t } = useI18n()
@@ -115,186 +157,96 @@ export function ChecklistDetailPage() {
 
   if (!checklist) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400">
-        {t('checklists.notFound')}
+      <div className="mx-auto max-w-4xl">
+        <Card styles={{ body: CARD_BODY_STYLE }}>
+          <Text type="secondary">{t('checklists.notFound')}</Text>
+        </Card>
       </div>
     )
   }
 
-  const version = checklist.current_version as ChecklistVersionDetail | number | null | undefined
-  const versionItems = typeof version === 'object' ? version?.items ?? [] : []
-  const detailItems = versionItems.length > 0 ? versionItems : checklist.items ?? []
+  const status = checklist.status || 'draft'
+  const executionMode = checklist.execution_mode || 'free_order'
+  const detailItems = getChecklistItems(checklist)
+  const metadataItems: DescriptionItems = [
+    ...getCategoryItem(checklist, t),
+    {
+      key: 'mode',
+      label: t('checklists.mode'),
+      children: <Tag icon={<Clock size={12} />}>{t(executionModeLabelKeys[executionMode])}</Tag>,
+    },
+  ]
+  const actionItems: MenuProps['items'] = [
+    { key: 'duplicate', icon: <Copy size={14} />, label: t('checklists.duplicate'), onClick: handleDuplicate },
+    { type: 'divider' },
+    { key: 'delete', danger: true, icon: <Trash2 size={14} />, label: t('common.delete'), onClick: handleDelete },
+  ]
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link
-            to="/checklists"
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500"
-          >
-            <ArrowLeft size={20} />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {checklist.title || checklist.name}
-            </h1>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[checklist.status || 'draft']}`}>
-                {t(statusLabelKeys[checklist.status || 'draft'])}
-              </span>
-              {checklist.execution_mode === 'sequential' && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <Clock size={12} />
-                   {t('checklists.sequential')}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Card className="shadow-sm" styles={{ body: CARD_BODY_STYLE }}>
+        <Flex align="flex-start" gap={16} justify="space-between" wrap="wrap">
+          <Space align="start" size={16}>
+            <Button
+              aria-label={t('nav.checklists')}
+              icon={<ArrowLeft size={18} />}
+              onClick={() => navigate('/checklists')}
+              shape="circle"
+              type="text"
+            />
+            <Space direction="vertical" size={6}>
+              <Title level={2} style={{ margin: 0 }}>{checklist.title || checklist.name}</Title>
+              <Space size={6} wrap>
+                <Tag color={statusColors[status]}>{t(statusLabelKeys[status])}</Tag>
+                {executionMode === 'sequential' && <Tag icon={<Clock size={12} />}>{t('checklists.sequential')}</Tag>}
+              </Space>
+            </Space>
+          </Space>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleStartInstance}
-            disabled={checklist.status !== 'active'}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
-          >
-            <Play size={16} />
-             {t('checklists.start')}
-          </button>
+          <Space wrap>
+            <Button
+              disabled={status !== 'active'}
+              icon={<Play size={16} />}
+              loading={createInstance.isPending}
+              onClick={handleStartInstance}
+              type="primary"
+            >
+              {t('checklists.start')}
+            </Button>
+            <Button aria-label={t('common.edit')} icon={<Edit size={18} />} onClick={() => setShowEditModal(true)} />
+            <Dropdown menu={{ items: actionItems }} trigger={['click']}>
+              <Button aria-label={t('common.actions')} icon={<MoreVertical size={18} />} />
+            </Dropdown>
+          </Space>
+        </Flex>
+      </Card>
 
-          <button
-            aria-label={t('common.edit')}
-            onClick={() => setShowEditModal(true)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500"
-          >
-            <Edit size={20} />
-          </button>
-
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button aria-label={t('common.actions')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500">
-                <MoreVertical size={20} />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className="min-w-[140px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 p-1 z-50"
-                sideOffset={5}
-              >
-                <DropdownMenu.Item asChild>
-                  <button
-                    onClick={handleDuplicate}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
-                  >
-                    <Copy size={14} />
-                    {t('checklists.duplicate')}
-                  </button>
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                <DropdownMenu.Item asChild>
-                  <button
-                    onClick={handleDelete}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
-                  >
-                    <Trash2 size={14} />
-                    {t('common.delete')}
-                  </button>
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        </div>
-      </div>
-
-      <div className="space-y-6">
+      <Space className="w-full" direction="vertical" size={24}>
         {checklist.description && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-            <p className="text-gray-600 dark:text-gray-400">{checklist.description}</p>
-          </div>
+          <Card styles={{ body: CARD_BODY_STYLE }}>
+            <Paragraph type="secondary" style={{ margin: 0 }}>{checklist.description}</Paragraph>
+          </Card>
         )}
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-2">
-              <CheckSquare size={16} className="text-gray-400" />
-              <div>
-                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.items')}</p>
-                <p className="font-medium text-gray-900 dark:text-white">{checklist.items_count ?? detailItems.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Play size={16} className="text-gray-400" />
-              <div>
-                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.uses')}</p>
-                <p className="font-medium text-gray-900 dark:text-white">{checklist.usage_count || 0}</p>
-              </div>
-            </div>
-            {checklist.category && (
-              <div className="flex items-center gap-2">
-                <Folder size={16} className="text-gray-400" />
-                <div>
-                   <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.category')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{checklist.category}</p>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Clock size={16} className="text-gray-400" />
-              <div>
-                 <p className="text-xs text-gray-500 dark:text-gray-400">{t('checklists.mode')}</p>
-                <p className="font-medium text-gray-900 dark:text-white capitalize">
-                  {t(executionModeLabelKeys[checklist.execution_mode || 'free_order'])}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card styles={{ body: CARD_BODY_STYLE }}>
+          <Flex gap={32} wrap="wrap">
+            <Statistic prefix={<CheckSquare size={18} />} title={t('checklists.items')} value={checklist.items_count ?? detailItems.length} />
+            <Statistic prefix={<Play size={18} />} title={t('checklists.uses')} value={checklist.usage_count || 0} />
+          </Flex>
+          <Descriptions className="mt-4" column={{ xs: 1, sm: 2 }} items={metadataItems} />
+        </Card>
 
-        {checklist.tags?.length > 0 && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TagIcon size={16} className="text-gray-400" />
-               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('checklists.tags')}</span>
-            </div>
-            <TagPills tags={checklist.tags} />
-          </div>
-        )}
+        {checklist.tags?.length > 0 && <TagSection tags={checklist.tags} t={t} />}
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-             {t('checklists.itemsTitle')}
-          </h2>
-          <div className="space-y-2">
-            {detailItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg"
-              >
-                <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded text-sm text-gray-500 dark:text-gray-400">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {item.title || item.content}
-                    {item.is_required && (
-                      <span className="text-red-500 ml-1">*</span>
-                    )}
-                  </p>
-                  {item.description && (
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
+        <Card title={t('checklists.itemsTitle')} styles={{ body: CARD_BODY_STYLE }}>
+          <List
+            dataSource={detailItems}
+            renderItem={(item, index) => <ChecklistItemRow index={index} item={item} t={t} />}
+            rowKey="id"
+            split={false}
+          />
+        </Card>
+      </Space>
 
       {showEditModal && (
         <ChecklistFormModal
@@ -303,15 +255,23 @@ export function ChecklistDetailPage() {
         />
       )}
 
-      <ConfirmDialog
+      <Modal
+        cancelText={t('common.cancel')}
+        confirmLoading={deleteChecklist.isPending}
+        okButtonProps={{ danger: true }}
+        okText={t('common.delete')}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onOk={confirmDelete}
         open={showDeleteConfirm}
-        onOpenChange={setShowDeleteConfirm}
         title={t('checklists.deleteTitle')}
-        description={t('checklists.deleteOneConfirm')}
-        confirmLabel={t('common.delete')}
-        variant="destructive"
-        onConfirm={confirmDelete}
-      />
+      >
+        <Text>{t('checklists.deleteOneConfirm')}</Text>
+      </Modal>
     </div>
   )
+}
+
+function getCategoryItem(checklist: ChecklistTemplate, t: Translate): DescriptionItems {
+  if (!checklist.category) return []
+  return [{ key: 'category', label: t('checklists.category'), children: <Tag icon={<Folder size={12} />}>{checklist.category}</Tag> }]
 }

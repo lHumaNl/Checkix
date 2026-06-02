@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { Progress, Typography } from 'antd'
 import { useI18n } from '@/i18n'
 
 interface InstanceProgressBarProps {
@@ -17,26 +18,26 @@ export function InstanceProgressBar({
   const { t } = useI18n()
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
 
-  const sizeClasses = {
-    sm: 'h-1',
-    md: 'h-2',
-    lg: 'h-3',
+  const strokeWidthBySize = {
+    sm: 4,
+    md: 8,
+    lg: 12,
   }
 
-  const getColor = () => {
-    if (percentage >= 100) return 'bg-green-500'
-    if (percentage >= 75) return 'bg-blue-500'
-    if (percentage >= 50) return 'bg-yellow-500'
-    return 'bg-gray-400'
+  const strokeColor = () => {
+    if (percentage >= 100) return '#22c55e'
+    if (percentage >= 75) return '#2563eb'
+    if (percentage >= 50) return '#eab308'
+    return '#9ca3af'
   }
 
   return (
     <div className="w-full">
       {showLabel && (
         <div className="flex justify-between items-center mb-1">
-          <span className="text-sm text-gray-600 dark:text-gray-400">
+          <Typography.Text type="secondary" className="text-sm">
             {t('checklistInstance.progressCompleted', { completed, total })}
-          </span>
+          </Typography.Text>
           <motion.span
             key={percentage}
             initial={{ scale: 1.2 }}
@@ -47,14 +48,13 @@ export function InstanceProgressBar({
           </motion.span>
         </div>
       )}
-      <div className={`w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden ${sizeClasses[size]}`}>
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className={`h-full ${getColor()} rounded-full`}
-        />
-      </div>
+      <Progress
+        percent={percentage}
+        showInfo={false}
+        status={percentage >= 100 ? 'success' : 'active'}
+        strokeColor={strokeColor()}
+        strokeWidth={strokeWidthBySize[size]}
+      />
     </div>
   )
 }

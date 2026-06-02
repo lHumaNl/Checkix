@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { Button, Card, Result, Skeleton, Typography } from 'antd'
 import { TemplateMarketplace, TemplatePreview } from '@/components/community'
 import { useCommunityTemplates, useFeaturedTemplates, useDownloadTemplate } from '@/api/useCommunityTemplates'
 import { toast } from '@/hooks/useToast'
 import { useI18n } from '@/i18n'
 import type { CommunityTemplate } from '@/types'
+
+const { Paragraph, Title } = Typography
 
 export function CommunityPage() {
   const { t } = useI18n()
@@ -21,56 +23,53 @@ export function CommunityPage() {
   }
 
   const handleDownload = async (template: CommunityTemplate) => {
-    downloadMutation.mutate(template.id, {
-      onSuccess: () => {
-        toast({ title: t('community.downloaded'), variant: 'default' })
-        setIsPreviewOpen(false)
-      },
-      onError: () => {
-        toast({ title: t('community.downloadFailed'), variant: 'destructive' })
-      },
-    })
+    try {
+      await downloadMutation.mutateAsync(template.id)
+      toast({ title: t('community.downloaded'), variant: 'default' })
+      setIsPreviewOpen(false)
+    } catch {
+      toast({ title: t('community.downloadFailed'), variant: 'destructive' })
+    }
   }
 
   if (templatesLoading || featuredLoading) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          <span>{t('community.loadingTemplates')}</span>
-        </div>
-      </div>
+      <Card className="shadow-sm">
+        <Skeleton active paragraph={{ rows: 10 }} title={{ width: '35%' }} />
+        <span className="sr-only">{t('community.loadingTemplates')}</span>
+      </Card>
     )
   }
 
   if (templatesError || featuredError) {
     return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('community.loadFailed')}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {templatesErrorMsg?.message || t('community.networkError')}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-          >
-            {t('common.retry')}
-          </button>
-        </div>
-      </div>
+      <Card className="shadow-sm">
+        <Result
+          status="error"
+          title={t('community.loadFailed')}
+          subTitle={templatesErrorMsg?.message || t('community.networkError')}
+          extra={<Button type="primary" onClick={() => window.location.reload()}>{t('common.retry')}</Button>}
+        />
+      </Card>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('community.title')}</h1>
-          <p className="text-gray-600 dark:text-gray-400">{t('community.subtitle')}</p>
+      <Card className="overflow-hidden shadow-sm" styles={{ body: { padding: 0 } }}>
+        <div className="relative p-6 sm:p-8">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-cyan-50 dark:from-blue-950/30 dark:via-gray-900 dark:to-cyan-950/20" />
+          <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-cyan-300/30 blur-3xl dark:bg-cyan-500/10" />
+          <div className="relative max-w-3xl">
+            <Title level={1} className="text-2xl sm:text-3xl" style={{ marginBottom: 4 }}>
+              {t('community.title')}
+            </Title>
+            <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+              {t('community.subtitle')}
+            </Paragraph>
+          </div>
         </div>
-      </div>
+      </Card>
 
       <TemplateMarketplace
         templates={templates}
@@ -83,7 +82,9 @@ export function CommunityPage() {
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
         template={selectedTemplate}
-        onDownload={() => selectedTemplate && handleDownload(selectedTemplate)}
+        onDownload={() => {
+          if (selectedTemplate) return handleDownload(selectedTemplate)
+        }}
       />
     </div>
   )

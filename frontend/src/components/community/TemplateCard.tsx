@@ -1,7 +1,10 @@
-import { Download, Star, User } from 'lucide-react'
+import { Avatar, Button, Card, Rate, Space, Tag, Typography } from 'antd'
+import { Download, User } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
 import type { CommunityTemplate } from '@/types'
+
+const { Paragraph, Text, Title } = Typography
 
 interface TemplateCardProps {
   template: CommunityTemplate
@@ -11,15 +14,15 @@ interface TemplateCardProps {
 }
 
 const categoryColors: Record<string, string> = {
-  travel: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-  work: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  health: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-  home: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300',
-  shopping: 'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300',
-  education: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300',
-  fitness: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
-  finance: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
-  productivity: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
+  travel: 'blue',
+  work: 'default',
+  health: 'green',
+  home: 'gold',
+  shopping: 'magenta',
+  education: 'geekblue',
+  fitness: 'orange',
+  finance: 'cyan',
+  productivity: 'purple',
 }
 
 const categoryEmojis: Record<string, string> = {
@@ -52,99 +55,108 @@ function getCategoryEmoji(category: string): string {
 
 export function TemplateCard({ template, onClick, onDownload, variant = 'grid' }: TemplateCardProps) {
   const { t } = useI18n()
-  const categoryColor = categoryColors[template.category] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+  const categoryColor = categoryColors[template.category] || 'default'
   const categoryLabel = categoryLabelKeys[template.category] ? t(categoryLabelKeys[template.category]) : template.category
+  const cardClass = 'group h-full cursor-pointer overflow-hidden shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl'
+
+  const handleDownloadClick = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    onDownload()
+  }
 
   if (variant === 'list') {
     return (
-      <div
-        className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 hover:shadow-md transition-shadow cursor-pointer flex items-center gap-4"
+      <Card
+        className="cursor-pointer shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
         onClick={onClick}
+        styles={{ body: { padding: 16 } }}
       >
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg flex items-center justify-center text-2xl">
-          {getCategoryEmoji(template.category)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-gray-900 dark:text-white truncate">{template.title}</h3>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${categoryColor}`}>
-              {categoryLabel}
-            </span>
+        <div className="flex items-center gap-4">
+          <Avatar
+            className="shrink-0 bg-gradient-to-br from-blue-500 to-cyan-400 text-2xl shadow-inner"
+            shape="square"
+            size={64}
+          >
+            {getCategoryEmoji(template.category)}
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <Space size={6} className="mb-1 max-w-full" wrap>
+              <Title level={5} className="truncate" style={{ margin: 0 }}>
+                {template.title}
+              </Title>
+              <Tag color={categoryColor} className="m-0">{categoryLabel}</Tag>
+            </Space>
+            <Paragraph type="secondary" ellipsis style={{ marginBottom: 8 }}>
+              {template.description}
+            </Paragraph>
+            <TemplateStats template={template} />
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{template.description}</p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-            <span className="flex items-center gap-1">
-              <User size={12} />
-              {template.author.username}
-            </span>
-            <span className="flex items-center gap-1">
-              <Star size={12} />
-              {template.rating.toFixed(1)} ({template.rating_count})
-            </span>
-            <span className="flex items-center gap-1">
-              <Download size={12} />
-              {template.download_count}
-            </span>
-          </div>
+          <Button type="primary" icon={<Download size={16} />} onClick={handleDownloadClick}>
+            {t('common.download')}
+          </Button>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDownload()
-          }}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          {t('common.download')}
-        </button>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div
-      className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden hover:shadow-md transition-shadow cursor-pointer group"
+    <Card
+      className={cardClass}
       onClick={onClick}
+      cover={<TemplateCover category={template.category} />}
+      styles={{ body: { padding: 16 } }}
     >
-      <div className="h-32 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 flex items-center justify-center">
-        <div className="text-4xl">
-          {getCategoryEmoji(template.category)}
-        </div>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <Title level={5} ellipsis style={{ margin: 0 }}>
+          {template.title}
+        </Title>
+        <Tag color={categoryColor} className="m-0 shrink-0">{categoryLabel}</Tag>
       </div>
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-medium text-gray-900 dark:text-white line-clamp-1">{template.title}</h3>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${categoryColor}`}>
-            {categoryLabel}
-          </span>
-        </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">{template.description}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 text-sm text-gray-400">
-            <User size={14} />
-            {template.author.username}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-sm">
-              <Star size={14} className="text-yellow-400" fill="currentColor" />
-              <span className="text-gray-600 dark:text-gray-300">{template.rating.toFixed(1)}</span>
-            </div>
-            <span className="text-gray-300 dark:text-gray-700">|</span>
-            <div className="flex items-center gap-1 text-sm text-gray-400">
-              <Download size={14} />
-              {template.download_count}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDownload()
-          }}
-          className="w-full mt-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors opacity-0 group-hover:opacity-100"
-        >
-          {t('community.downloadTemplate')}
-        </button>
+      <Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ minHeight: 44, marginBottom: 12 }}>
+        {template.description}
+      </Paragraph>
+      <TemplateStats template={template} />
+      <Button
+        block
+        type="primary"
+        className="mt-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+        icon={<Download size={16} />}
+        onClick={handleDownloadClick}
+      >
+        {t('community.downloadTemplate')}
+      </Button>
+    </Card>
+  )
+}
+
+function TemplateCover({ category }: { category: string }) {
+  return (
+    <div className="relative h-32 overflow-hidden bg-gradient-to-br from-blue-50 via-cyan-50 to-purple-50 dark:from-blue-950/40 dark:via-cyan-950/20 dark:to-purple-950/40">
+      <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_20%_20%,rgba(37,99,235,.35),transparent_28%),radial-gradient(circle_at_80%_0%,rgba(6,182,212,.32),transparent_30%)]" />
+      <div className="relative flex h-full items-center justify-center text-5xl drop-shadow-sm">
+        {getCategoryEmoji(category)}
       </div>
+    </div>
+  )
+}
+
+function TemplateStats({ template }: { template: CommunityTemplate }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <Text type="secondary" className="inline-flex min-w-0 items-center gap-1">
+        <User size={14} />
+        <span className="truncate">{template.author.username}</span>
+      </Text>
+      <Space size={10}>
+        <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+          <Rate disabled allowHalf count={1} value={1} style={{ color: '#facc15', fontSize: 14 }} />
+          <span>{template.rating.toFixed(1)}</span>
+        </span>
+        <Text type="secondary" className="inline-flex items-center gap-1">
+          <Download size={14} />
+          {template.download_count}
+        </Text>
+      </Space>
     </div>
   )
 }

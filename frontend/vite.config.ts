@@ -27,7 +27,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
-          if (id.includes('/react-big-calendar') || id.includes('/date-fns')) return 'calendar'
+          if (id.includes('/date-fns')) return 'calendar'
           if (id.includes('/react-dom') || id.includes('/scheduler')) return 'react-dom'
           if (id.includes('/react-router')) return 'react-router'
           if (id.includes('/react/')) return 'react'

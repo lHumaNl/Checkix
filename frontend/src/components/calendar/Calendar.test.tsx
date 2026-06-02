@@ -41,6 +41,7 @@ describe('CalendarView', () => {
     expect(screen.getByRole('button', { name: /new event/i })).toBeInTheDocument()
     expect(screen.getByText('Month')).toBeInTheDocument()
     expect(screen.getByText('Week')).toBeInTheDocument()
+    expect(document.querySelector('.checkix-ant-calendar')).toBeInTheDocument()
     expect(screen.getByText('Design review')).toBeInTheDocument()
   })
 
@@ -53,11 +54,12 @@ describe('CalendarView', () => {
     expect(onCreateEvent).toHaveBeenCalledWith()
   })
 
-  it('navigates by week while the week view is selected', () => {
+  it('renders a card-based week view and navigates by week', () => {
     const onDateChange = vi.fn()
     renderCalendar(vi.fn(), onDateChange)
 
     fireEvent.click(screen.getByText('Week'))
+    expect(document.querySelector('.checkix-ant-calendar')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
     expect(onDateChange).toHaveBeenCalledWith(new Date('2026-06-09T00:00:00Z'))

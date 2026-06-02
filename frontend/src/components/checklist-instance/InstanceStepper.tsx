@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button, Card, Checkbox, Steps, Tag, Typography } from 'antd'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import type { ChecklistInstance, ChecklistItemInstance } from '@/types'
+
+const { Text, Title } = Typography
 
 interface InstanceStepperProps {
   instance: ChecklistInstance
@@ -25,6 +28,8 @@ export function InstanceStepper({
   const currentItem = items[currentStep]
   const currentResponse: ChecklistItemInstance | undefined = currentItem
 
+  if (!currentItem) return null
+
   const handleNext = () => {
     if (canProceed && currentStep < totalSteps - 1) {
       onStepChange(currentStep + 1)
@@ -40,112 +45,89 @@ export function InstanceStepper({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <Title level={2} className="!m-0 !text-lg">
           {t('checklistInstance.stepOf', { current: currentStep + 1, total: totalSteps })}
-        </h2>
+        </Title>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={handlePrev}
             disabled={currentStep === 0}
-            className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
+            icon={<ChevronLeft size={20} />}
+          />
+          <Button
             onClick={handleNext}
             disabled={currentStep === totalSteps - 1 || !canProceed}
-            className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <ChevronRight size={20} />
-          </button>
+            icon={<ChevronRight size={20} />}
+          />
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto pb-2">
-        {items.map((item, index) => {
-          const isCompleted = item.is_completed
-          const isCurrent = index === currentStep
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onStepChange(index)}
-              className={`flex-shrink-0 w-8 h-2 rounded-full transition-all ${
-                isCurrent
-                  ? 'bg-blue-500 w-12'
-                  : isCompleted
-                  ? 'bg-green-500'
-                  : 'bg-gray-300 dark:bg-gray-700'
-              }`}
-            />
-          )
-        })}
-      </div>
+      <Steps
+        current={currentStep}
+        items={items.map((item) => ({
+          status: item.is_completed ? 'finish' : 'wait',
+          title: '',
+        }))}
+        onChange={onStepChange}
+        responsive={false}
+        size="small"
+      />
 
       <motion.div
         key={currentStep}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
-        className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6"
       >
-        <div className="flex items-start gap-4">
-          <button
-            onClick={() => onResponseUpdate(currentItem.id, !currentResponse?.is_completed)}
-            className={`flex-shrink-0 w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
-              currentResponse?.is_completed
-                ? 'bg-green-500 border-green-500 text-white'
-                : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
-            }`}
-          >
-            {currentResponse?.is_completed && <Check size={18} />}
-          </button>
+        <Card>
+          <div className="flex items-start gap-4">
+            <Checkbox
+              checked={currentResponse?.is_completed}
+              onChange={() => onResponseUpdate(currentItem.id, !currentResponse?.is_completed)}
+            />
 
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-lg font-medium ${
-              currentResponse?.is_completed
-                ? 'text-gray-400 dark:text-gray-500 line-through'
-                : 'text-gray-900 dark:text-white'
-            }`}>
-              {currentItem.title}
-            </h3>
+            <div className="flex-1 min-w-0">
+              <Title
+                level={3}
+                className={`!mb-0 !text-lg ${currentResponse?.is_completed ? 'line-through opacity-60' : ''}`}
+              >
+                {currentItem.title}
+              </Title>
 
-            {currentItem.description && (
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {currentItem.description}
-              </p>
-            )}
+              {currentItem.description && (
+                <Text className="mt-2 block" type="secondary">
+                  {currentItem.description}
+                </Text>
+              )}
 
-            {currentItem.is_required && (
-              <span className="mt-2 inline-block text-xs text-red-600 dark:text-red-400">
-                * {t('checklists.required')}
-              </span>
-            )}
+              {currentItem.is_required && (
+                <Tag color="red" className="mt-2">{t('checklists.required')}</Tag>
+              )}
 
-            {currentResponse?.completed_at && (
-              <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                {t('checklistInstance.completedAt', { date: new Date(currentResponse.completed_at).toLocaleTimeString() })}
-              </p>
-            )}
+              {currentResponse?.completed_at && (
+                <Text className="mt-3 block text-xs" type="secondary">
+                  {t('checklistInstance.completedAt', { date: new Date(currentResponse.completed_at).toLocaleTimeString() })}
+                </Text>
+              )}
+            </div>
           </div>
-        </div>
+        </Card>
       </motion.div>
 
       <div className="flex justify-between">
-        <button
+        <Button
           onClick={handlePrev}
           disabled={currentStep === 0}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {t('checklistInstance.previous')}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleNext}
           disabled={currentStep === totalSteps - 1 || !canProceed}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          type="primary"
         >
           {currentStep === totalSteps - 1 ? t('checklistInstance.finish') : t('checklistInstance.next')}
-        </button>
+        </Button>
       </div>
     </div>
   )

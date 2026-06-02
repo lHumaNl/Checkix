@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { motion } from 'framer-motion'
+import { Button, Tag } from 'antd'
 import { Play, Pause } from 'lucide-react'
 import { useI18n } from '@/i18n'
 
@@ -95,35 +96,35 @@ export function InstanceTimer({
       {!completedAt && (
         <div className="flex items-center gap-1">
           {isPaused ? (
-            <button
+            <Button
               onClick={onResume}
-              className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900 transition-colors"
+              icon={<Play size={18} />}
+              type="text"
+              className="text-green-600 dark:text-green-400"
               title={t('checklistInstance.resume')}
-            >
-              <Play size={18} />
-            </button>
+            />
           ) : (
-            <button
+            <Button
               onClick={onPause}
-              className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900 transition-colors"
+              icon={<Pause size={18} />}
+              type="text"
+              className="text-yellow-600 dark:text-yellow-400"
               title={t('status.paused')}
-            >
-              <Pause size={18} />
-            </button>
+            />
           )}
         </div>
       )}
 
       {isPaused && !completedAt && (
-        <span className="text-sm text-yellow-600 dark:text-yellow-400 animate-pulse">
+        <Tag color="gold" className="animate-pulse">
           {t('status.paused')}
-        </span>
+        </Tag>
       )}
 
       {completedAt && (
-        <span className="text-sm text-green-600 dark:text-green-400">
+        <Tag color="green">
           {t('status.completed')}
-        </span>
+        </Tag>
       )}
     </div>
   )

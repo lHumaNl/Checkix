@@ -1,7 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { Button, Carousel, Rate, Space, Tag, Typography } from 'antd'
+import type { CarouselRef } from 'antd/es/carousel'
 import { ChevronLeft, ChevronRight, Download, Star } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import type { CommunityTemplate } from '@/types'
+
+const { Paragraph, Text, Title } = Typography
 
 interface FeaturedCarouselProps {
   templates: CommunityTemplate[]
@@ -10,133 +14,121 @@ interface FeaturedCarouselProps {
 
 export function FeaturedCarousel({ templates, onTemplateClick }: FeaturedCarouselProps) {
   const { t } = useI18n()
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  useEffect(() => {
-    if (isAutoPlaying && templates.length > 1) {
-      intervalRef.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % templates.length)
-      }, 5000)
-    }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isAutoPlaying, templates.length])
+  const carouselRef = useRef<CarouselRef | null>(null)
 
   if (templates.length === 0) return null
 
   const handlePrev = () => {
-    setIsAutoPlaying(false)
-    setCurrentIndex((prev) => (prev - 1 + templates.length) % templates.length)
+    carouselRef.current?.prev()
   }
 
   const handleNext = () => {
-    setIsAutoPlaying(false)
-    setCurrentIndex((prev) => (prev + 1) % templates.length)
+    carouselRef.current?.next()
   }
 
-  const current = templates[currentIndex]
-
   return (
-    <div 
-      className="relative bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl overflow-hidden h-64"
-      onMouseEnter={() => setIsAutoPlaying(false)}
-      onMouseLeave={() => setIsAutoPlaying(true)}
-    >
-      <div 
-        className="absolute inset-0 bg-cover bg-center opacity-20"
-        style={{ 
-          backgroundImage: `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>')`
-        }}
-      />
-      
-      <div className="relative h-full flex items-center p-8">
-        <div className="flex-1">
-          <div className="inline-flex items-center gap-1 px-2 py-1 bg-white/20 rounded-full text-white text-xs font-medium mb-3">
-            <Star size={12} fill="currentColor" />
-            {t('community.featuredTemplate')}
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">{current.title}</h2>
-          <p className="text-white/80 mb-4 line-clamp-2">{current.description}</p>
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-white/80 text-sm">{t('community.byAuthor', { author: current.author.username })}</span>
-            <span className="flex items-center gap-1 text-white/80 text-sm">
-              <Star size={14} fill="currentColor" />
-              {current.rating.toFixed(1)}
-            </span>
-            <span className="flex items-center gap-1 text-white/80 text-sm">
-              <Download size={14} />
-              {current.download_count}
-            </span>
-          </div>
-          <button
-            onClick={() => onTemplateClick(current)}
-            className="px-4 py-2 bg-white text-blue-600 rounded-md font-medium hover:bg-blue-50 transition-colors"
-          >
-            {t('community.viewTemplate')}
-          </button>
-        </div>
-
-        <div className="hidden md:block flex-1">
-          <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
-            <div className="space-y-2">
-              {current.items.slice(0, 5).map((item, i) => (
-                <div key={item.id} className="flex items-center gap-2 text-white/90 text-sm">
-                  <div className="w-4 h-4 rounded border border-white/30 flex items-center justify-center">
-                    {i === 0 && <div className="w-2 h-2 bg-white rounded-sm" />}
-                  </div>
-                  <span className="truncate">{item.content}</span>
-                </div>
-              ))}
-              {current.items.length > 5 && (
-                <div className="text-white/60 text-xs">
-                  {t('community.moreItems', { count: current.items.length - 5 })}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="relative overflow-hidden rounded-2xl bg-blue-700 shadow-xl shadow-blue-950/10 dark:shadow-black/30">
+      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(120deg,rgba(255,255,255,.35),transparent_35%),radial-gradient(circle_at_72%_28%,rgba(34,211,238,.5),transparent_30%),radial-gradient(circle_at_18%_72%,rgba(168,85,247,.45),transparent_30%)]" />
+      <Carousel
+        ref={carouselRef}
+        autoplay
+        dots
+        className="relative"
+      >
+        {templates.map((template) => (
+          <FeaturedSlide
+            key={template.id}
+            template={template}
+            onTemplateClick={onTemplateClick}
+          />
+        ))}
+      </Carousel>
 
       {templates.length > 1 && (
         <>
-          <button
+          <Button
             onClick={handlePrev}
             aria-label={t('community.previousTemplate')}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
+            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-white/20 text-white backdrop-blur hover:bg-white/30"
+            shape="circle"
+            type="text"
           >
             <ChevronLeft size={24} />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleNext}
             aria-label={t('community.nextTemplate')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
+            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 border-white/30 bg-white/20 text-white backdrop-blur hover:bg-white/30"
+            shape="circle"
+            type="text"
           >
             <ChevronRight size={24} />
-          </button>
+          </Button>
         </>
       )}
+    </div>
+  )
+}
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2" role="tablist" aria-label={t('community.templateNavigation')}>
-        {templates.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              setIsAutoPlaying(false)
-              setCurrentIndex(i)
-            }}
-            aria-label={t('community.goToTemplate', { number: i + 1 })}
-            aria-selected={i === currentIndex}
-            role="tab"
-            className={`w-2 h-2 rounded-full transition-colors ${
-              i === currentIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/60'
-            }`}
-          />
+function FeaturedSlide({
+  template,
+  onTemplateClick,
+}: {
+  template: CommunityTemplate
+  onTemplateClick: (template: CommunityTemplate) => void
+}) {
+  const { t } = useI18n()
+
+  return (
+    <div className="min-h-72 px-8 py-8 md:px-12">
+      <div className="grid h-full items-center gap-6 md:grid-cols-[1.1fr_.9fr]">
+        <div>
+          <Tag className="mb-4 border-white/25 bg-white/20 text-white" icon={<Star size={12} fill="currentColor" />}>
+            {t('community.featuredTemplate')}
+          </Tag>
+          <Title level={2} className="text-white" style={{ marginBottom: 8 }}>
+            {template.title}
+          </Title>
+          <Paragraph className="max-w-2xl text-white/80" ellipsis={{ rows: 2 }}>
+            {template.description}
+          </Paragraph>
+          <Space size={16} wrap className="mb-5 text-white/85">
+            <Text className="text-white/85">{t('community.byAuthor', { author: template.author.username })}</Text>
+            <span className="inline-flex items-center gap-1">
+              <Rate disabled count={1} value={1} style={{ color: '#facc15', fontSize: 14 }} />
+              {template.rating.toFixed(1)}
+            </span>
+            <span className="inline-flex items-center gap-1"><Download size={14} />{template.download_count}</span>
+          </Space>
+          <Button type="primary" ghost className="border-white text-white" onClick={() => onTemplateClick(template)}>
+            {t('community.viewTemplate')}
+          </Button>
+        </div>
+        <TemplateItemPreview template={template} />
+      </div>
+    </div>
+  )
+}
+
+function TemplateItemPreview({ template }: { template: CommunityTemplate }) {
+  const { t } = useI18n()
+
+  return (
+    <div className="hidden rounded-2xl border border-white/15 bg-white/15 p-4 backdrop-blur-md md:block">
+      <div className="space-y-2">
+        {template.items.slice(0, 5).map((item, index) => (
+          <div key={item.id} className="flex items-center gap-2 text-sm text-white/90">
+            <span className="flex h-5 w-5 items-center justify-center rounded border border-white/35 text-[10px]">
+              {index + 1}
+            </span>
+            <span className="truncate">{item.content}</span>
+          </div>
         ))}
+        {template.items.length > 5 && (
+          <Text className="text-xs text-white/65">
+            {t('community.moreItems', { count: template.items.length - 5 })}
+          </Text>
+        )}
       </div>
     </div>
   )

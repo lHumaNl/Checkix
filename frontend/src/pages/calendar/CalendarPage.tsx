@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { addMonths, subMonths } from 'date-fns'
 import { CalendarView, EventModal, MiniCalendar, UpcomingEvents } from '@/components/calendar'
-import { useCalendarEvents, useCreateCalendarEvent, useUpdateCalendarEvent } from '@/api/useCalendarEvents'
+import { useCalendarEvents, useCreateCalendarEvent, useDeleteCalendarEvent, useUpdateCalendarEvent } from '@/api/useCalendarEvents'
 import { CalendarSkeleton } from '@/components/skeletons/CalendarSkeleton'
 import { toast } from '@/hooks/useToast'
 import type { CalendarEvent, CalendarEventCreate } from '@/types'
@@ -21,6 +21,7 @@ export function CalendarPage() {
   const { data: events = [], isLoading } = useCalendarEvents(startDate, endDate)
   const createMutation = useCreateCalendarEvent()
   const updateMutation = useUpdateCalendarEvent()
+  const deleteMutation = useDeleteCalendarEvent()
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
     setSelectedEvent(event)
@@ -31,8 +32,20 @@ export function CalendarPage() {
   const handleCreateEvent = useCallback((date?: Date) => {
     setSelectedEvent(null)
     setDefaultEventDate(date)
+    setSelectedDate(date)
     setIsModalOpen(true)
   }, [])
+
+  const handleDeleteEvent = useCallback(
+    async (event: CalendarEvent) => {
+      await deleteMutation.mutateAsync(event.id)
+      toast({ title: t('event.actionDelete') })
+      if (selectedEvent?.id === event.id) {
+        setSelectedEvent(null)
+      }
+    },
+    [deleteMutation, selectedEvent, t]
+  )
 
   const handleSubmitEvent = useCallback(
     async (data: CalendarEventCreate) => {
@@ -44,7 +57,9 @@ export function CalendarPage() {
         end_time: data.end_datetime,
         all_day: data.all_day,
         color: data.color,
+        reminder_minutes_before: data.reminder_minutes_before,
         event_type: data.event_type,
+        checklist_template: data.checklist_template,
       }
       if (selectedEvent) {
         await updateMutation.mutateAsync({ id: selectedEvent.id, ...payload })
@@ -68,6 +83,11 @@ export function CalendarPage() {
     setCurrentDate(date)
   }, [])
 
+  const handleDateSelect = useCallback((date: Date) => {
+    setSelectedDate(date)
+    setCurrentDate(date)
+  }, [])
+
   if (isLoading) {
     return <CalendarSkeleton />
   }
@@ -78,7 +98,7 @@ export function CalendarPage() {
         <MiniCalendar
           events={events}
           selectedDate={selectedDate}
-          onDateSelect={setSelectedDate}
+          onDateSelect={handleDateSelect}
           currentMonth={currentDate}
           onMonthChange={handleMonthChange}
         />
@@ -90,8 +110,11 @@ export function CalendarPage() {
           events={events}
           onEventClick={handleEventClick}
           onCreateEvent={handleCreateEvent}
+          onDeleteEvent={handleDeleteEvent}
           currentDate={currentDate}
           onDateChange={setCurrentDate}
+          selectedDate={selectedDate}
+          onDateSelect={handleDateSelect}
         />
       </div>
 

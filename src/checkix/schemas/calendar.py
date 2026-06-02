@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
 from checkix.schemas.common import ORMSchema
+
+CalendarEventType = Literal["checklist", "todo", "custom"]
 
 
 class CalendarEventOut(ORMSchema):
@@ -17,6 +19,9 @@ class CalendarEventOut(ORMSchema):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     all_day: bool = False
+    event_type: CalendarEventType = "custom"
+    reminder_minutes_before: Optional[int] = None
+    checklist_template: Optional[int] = None
     location: Optional[str] = None
     color: Optional[str] = None
     recurrence_rule: Optional[str] = None
@@ -31,6 +36,9 @@ class CalendarEventCreate(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     all_day: bool = False
+    event_type: CalendarEventType = "custom"
+    reminder_minutes_before: Optional[int] = None
+    checklist_template: Optional[int] = None
     location: Optional[str] = None
     color: Optional[str] = None
     recurrence_rule: Optional[str] = None
@@ -44,6 +52,9 @@ class CalendarEventUpdate(BaseModel):
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
     all_day: Optional[bool] = None
+    event_type: Optional[CalendarEventType] = None
+    reminder_minutes_before: Optional[int] = None
+    checklist_template: Optional[int] = None
     location: Optional[str] = None
     color: Optional[str] = None
     recurrence_rule: Optional[str] = None

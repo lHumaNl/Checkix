@@ -96,6 +96,43 @@ async def test_webhooks_list_returns_frontend_contract(
     assert item["recent_events"][0]["webhook_name"] == "Deploy hook"
 
 
+async def test_calendar_events_preserve_ant_design_fields(
+    api_client: AsyncClient,
+    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+) -> None:
+    owner = await authenticated_user_factory("calendar-contract-owner")
+    template = await _create_template(api_client, owner, "Launch checklist")
+    create_response = await api_client.post(
+        "/api/calendar-events/",
+        json={
+            "title": "Launch review",
+            "start_time": "2026-06-02T10:00:00Z",
+            "end_time": "2026-06-02T11:00:00Z",
+            "event_type": "checklist",
+            "reminder_minutes_before": 30,
+            "checklist_template": template["id"],
+        },
+        headers=owner.headers,
+    )
+
+    assert create_response.status_code == 201, create_response.text
+    created = create_response.json()
+    assert created["event_type"] == "checklist"
+    assert created["reminder_minutes_before"] == 30
+    assert created["checklist_template"] == template["id"]
+
+    update_response = await api_client.patch(
+        f"/api/calendar-events/{created['id']}/",
+        json={"reminder_minutes_before": 15, "checklist_template": None},
+        headers=owner.headers,
+    )
+
+    assert update_response.status_code == 200, update_response.text
+    updated = update_response.json()
+    assert updated["reminder_minutes_before"] == 15
+    assert updated["checklist_template"] is None
+
+
 async def _create_template(api_client: AsyncClient, owner: AuthenticatedUser, name: str) -> dict:
     response = await api_client.post("/api/checklists/", json={"name": name}, headers=owner.headers)
     assert response.status_code == 201, response.text

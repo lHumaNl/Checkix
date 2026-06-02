@@ -78,3 +78,12 @@ class CalendarEvent(TimestampMixin, Base):
 
     def __repr__(self) -> str:
         return f"<CalendarEvent(id={self.id}, title={self.title!r})>"
+
+    @property
+    def checklist_template(self) -> int | None:
+        """Frontend-facing alias for the linked checklist template id."""
+        return self.checklist_template_id
+
+    @checklist_template.setter
+    def checklist_template(self, value: int | None) -> None:
+        self.checklist_template_id = value

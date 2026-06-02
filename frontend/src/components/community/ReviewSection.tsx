@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Avatar, Button, Card, Empty, Input, List, Progress, Rate, Space, Typography } from 'antd'
 import { Star, MessageSquare, Send } from 'lucide-react'
 import { useI18n } from '@/i18n'
 import type { CommunityReview } from '@/types'
-import { StarRating } from './StarRating'
+
+const { Paragraph, Text, Title } = Typography
 
 interface ReviewSectionProps {
   reviews: CommunityReview[]
@@ -18,10 +20,13 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
   const handleSubmit = async () => {
     if (!newComment.trim()) return
     setIsSubmitting(true)
-    await onSubmitReview(newRating, newComment)
-    setNewComment('')
-    setNewRating(5)
-    setIsSubmitting(false)
+    try {
+      await onSubmitReview(newRating, newComment)
+      setNewComment('')
+      setNewRating(5)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({
@@ -34,68 +39,55 @@ export function ReviewSection({ reviews, onSubmitReview }: ReviewSectionProps) {
 
   return (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-        <MessageSquare size={20} />
+      <Title level={3} className="flex items-center gap-2" style={{ marginBottom: 0 }}>
+        <MessageSquare size={22} />
         {t('community.reviewsCount', { count: reviews.length })}
-      </h3>
+      </Title>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('community.ratingDistribution')}</h4>
-          <div className="space-y-2">
+        <Card title={t('community.ratingDistribution')} className="shadow-sm">
+          <Space direction="vertical" className="w-full" size={8}>
             {ratingDistribution.map(({ star, count, percentage }) => (
               <div key={star} className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400 w-6">{star}</span>
+                <Text type="secondary" className="w-4">{star}</Text>
                 <Star size={14} className="text-yellow-400" fill="currentColor" />
-                <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-yellow-400 rounded-full transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400 w-8">{count}</span>
+                <Progress percent={percentage} showInfo={false} strokeColor="#facc15" size="small" />
+                <Text type="secondary" className="w-8 text-xs">{count}</Text>
               </div>
             ))}
-          </div>
-        </div>
+          </Space>
+        </Card>
 
         <div className="md:col-span-2 space-y-4">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('community.writeReview')}</h4>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('community.yourRating')}</span>
-              <StarRating rating={newRating} onChange={setNewRating} interactive size={20} />
-            </div>
-            <textarea
+          <Card title={t('community.writeReview')} className="shadow-sm">
+            <Space align="center" className="mb-3" size={8}>
+              <Text type="secondary">{t('community.yourRating')}</Text>
+              <Rate allowHalf value={newRating} onChange={setNewRating} style={{ color: '#facc15' }} />
+            </Space>
+            <Input.TextArea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder={t('community.reviewPlaceholder')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />
             <div className="flex justify-end mt-2">
-              <button
+              <Button
+                type="primary"
+                icon={<Send size={14} />}
                 onClick={handleSubmit}
-                disabled={isSubmitting || !newComment.trim()}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+                loading={isSubmitting}
+                disabled={!newComment.trim()}
               >
-                <Send size={14} />
                 {t('community.submitReview')}
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
-          <div className="space-y-3">
-            {reviews.length === 0 ? (
-              <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                {t('community.noReviews')}
-              </div>
-            ) : (
-              reviews.map((review) => (
-                <ReviewItem key={review.id} review={review} />
-              ))
-            )}
-          </div>
+          {reviews.length === 0 ? (
+            <Card><Empty description={t('community.noReviews')} image={Empty.PRESENTED_IMAGE_SIMPLE} /></Card>
+          ) : (
+            <List dataSource={reviews} renderItem={(review) => <ReviewItem review={review} />} />
+          )}
         </div>
       </div>
     </div>
@@ -113,29 +105,23 @@ function ReviewItem({ review }: { review: CommunityReview }) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-4">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center overflow-hidden">
-          {review.user.avatar_url ? (
-            <img src={review.user.avatar_url} alt={review.user.username} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-white text-xs font-medium">
-              {review.user.username.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-gray-900 dark:text-white">{review.user.username}</span>
-            <span className="text-xs text-gray-400">{formatDate(review.created_at)}</span>
+    <List.Item className="border-0 p-0 pb-3">
+      <Card className="w-full shadow-sm" styles={{ body: { padding: 16 } }}>
+        <div className="flex items-start gap-3">
+          <Avatar src={review.user.avatar_url} className="bg-gradient-to-br from-blue-500 to-cyan-400">
+            {review.user.username.charAt(0).toUpperCase()}
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <Text strong>{review.user.username}</Text>
+              <Text type="secondary" className="text-xs">{formatDate(review.created_at)}</Text>
+            </div>
+            <Rate disabled allowHalf value={review.rating} style={{ color: '#facc15', fontSize: 12 }} />
+            <Paragraph type="secondary" style={{ marginBottom: 0 }}>{review.comment}</Paragraph>
           </div>
-          <div className="flex items-center gap-1 my-1">
-            <StarRating rating={review.rating} size={12} />
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{review.comment}</p>
         </div>
-      </div>
-    </div>
+      </Card>
+    </List.Item>
   )
 }
 

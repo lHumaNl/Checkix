@@ -80,11 +80,13 @@ async def create_calendar_event(
         start_datetime=body.start_time or datetime.now(),
         end_datetime=body.end_time,
         all_day=body.all_day,
+        event_type=body.event_type,
+        reminder_minutes_before=body.reminder_minutes_before,
+        checklist_template_id=body.checklist_template,
         location=body.location,
         color=body.color or "#3498db",
         recurrence_rule=body.recurrence_rule,
         user_id=current_user.id,
-        event_type="custom",
     )
     db.add(event)
     await db.commit()
@@ -102,6 +104,7 @@ async def get_calendar_event(
     return await _get_event_or_404(db, event_id, current_user.id)
 
 
+@router.patch("/{event_id}/", response_model=CalendarEventOut)
 @router.put("/{event_id}/", response_model=CalendarEventOut)
 async def update_calendar_event(
     event_id: int,
@@ -118,6 +121,8 @@ async def update_calendar_event(
         update_data["start_datetime"] = update_data.pop("start_time")
     if "end_time" in update_data:
         update_data["end_datetime"] = update_data.pop("end_time")
+    if "checklist_template" in update_data:
+        update_data["checklist_template_id"] = update_data.pop("checklist_template")
 
     for field, value in update_data.items():
         if hasattr(event, field):

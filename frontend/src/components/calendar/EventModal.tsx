@@ -1,13 +1,25 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useForm, useWatch } from 'react-hook-form'
+import { useState, useEffect, useMemo, type ReactNode } from 'react'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { format } from 'date-fns'
-import { X, Calendar, Clock, Repeat, Link2, Palette, Bell } from 'lucide-react'
+import dayjs, { type Dayjs } from 'dayjs'
+import { Calendar, Clock, Repeat, Link2, Palette, Bell } from 'lucide-react'
+import { Button, Col, DatePicker, Form, Input, Modal, Radio, Row, Select, Space, Switch, TimePicker, Typography } from 'antd'
 import type { CalendarEvent } from '@/types'
 import { useChecklists } from '@/api/useChecklists'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
+
+const { Text } = Typography
+const { TextArea } = Input
+
+const DATE_TIME_FORMAT = 'YYYY-MM-DDTHH:mm'
+const DATE_FORMAT = 'YYYY-MM-DD'
+const TIME_FORMAT = 'HH:mm'
+const DEFAULT_EVENT_COLOR = '#3B82F6'
+const DEFAULT_EVENT_TIME = '00:00'
+const NO_REMINDER_VALUE = 'none'
+const NO_TEMPLATE_VALUE = 'none'
 
 const eventSchemaBase = z.object({
   title: z.string().min(1).max(200),
@@ -33,10 +45,10 @@ interface EventModalProps {
 }
 
 const eventTypes = [
-  { value: 'custom', labelKey: 'event.typeCustom', color: 'purple' },
-  { value: 'checklist', labelKey: 'event.typeChecklist', color: 'blue' },
-  { value: 'todo', labelKey: 'event.typeTodo', color: 'green' },
-] satisfies Array<{ value: EventFormData['event_type']; labelKey: MessageKey; color: string }>
+  { value: 'custom', labelKey: 'event.typeCustom' },
+  { value: 'checklist', labelKey: 'event.typeChecklist' },
+  { value: 'todo', labelKey: 'event.typeTodo' },
+] satisfies Array<{ value: EventFormData['event_type']; labelKey: MessageKey }>
 
 const colorOptions = [
   { value: '#3B82F6', labelKey: 'event.colorBlue' },
@@ -63,56 +75,33 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
   const { data: checklistsData } = useChecklists({ status: 'active' })
 
   const {
-    register,
     handleSubmit,
     control,
-    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<EventFormData>({
     resolver: zodResolver(validationSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      start_datetime: format(defaultDate ?? new Date(), "yyyy-MM-dd'T'HH:mm"),
-      end_datetime: format(defaultDate ?? new Date(), "yyyy-MM-dd'T'HH:mm"),
-      all_day: false,
-      color: '#3B82F6',
-      reminder_minutes_before: null,
-      event_type: 'custom',
-      checklist_template: null,
-    },
+    defaultValues: createDefaultValues(defaultDate),
   })
 
   const isAllDay = useWatch({ control, name: 'all_day' })
   const selectedType = useWatch({ control, name: 'event_type' })
-  const selectedColor = useWatch({ control, name: 'color' })
 
   useEffect(() => {
     if (event) {
       reset({
         title: event.title,
         description: event.description || '',
-        start_datetime: format(new Date(event.start_datetime), "yyyy-MM-dd'T'HH:mm"),
-        end_datetime: format(new Date(event.end_datetime ?? event.start_datetime), "yyyy-MM-dd'T'HH:mm"),
+        start_datetime: formatDateTime(new Date(event.start_datetime)),
+        end_datetime: formatDateTime(new Date(event.end_datetime ?? event.start_datetime)),
         all_day: event.all_day ?? false,
-        color: event.color || '#3B82F6',
+        color: event.color || DEFAULT_EVENT_COLOR,
         reminder_minutes_before: event.reminder_minutes_before ?? null,
         event_type: event.event_type || 'custom',
         checklist_template: event.checklist_template ?? null,
       })
-    } else if (defaultDate) {
-      reset({
-        title: '',
-        description: '',
-        start_datetime: format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
-        end_datetime: format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
-        all_day: false,
-        color: '#3B82F6',
-        reminder_minutes_before: null,
-        event_type: 'custom',
-        checklist_template: null,
-      })
+    } else {
+      reset(createDefaultValues(defaultDate))
     }
   }, [event, defaultDate, reset])
 
@@ -123,225 +112,120 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
     onClose()
   }
 
+  const eventTypeOptions = eventTypes.map(type => ({
+    value: type.value,
+    label: t(type.labelKey),
+  }))
+
+  const checklistOptions = [
+    { value: NO_TEMPLATE_VALUE, label: t('event.selectTemplate') },
+    ...(checklistsData?.items ?? []).map(tpl => ({
+      value: String(tpl.id),
+      label: tpl.name || tpl.title,
+    })),
+  ]
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="event-modal-title" aria-describedby="event-modal-description">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-          <div>
-            <h2 id="event-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
-              {event ? t('event.edit') : t('event.create')}
-            </h2>
-            <p id="event-modal-description" className="text-sm text-gray-500 dark:text-gray-400">
-              {event ? t('event.updateDetails') : t('event.createDetails')}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-            aria-label={t('common.close')}
-          >
-            <X size={20} />
-          </button>
-        </div>
+    <Modal
+      open={isOpen}
+      centered
+      destroyOnHidden
+      footer={null}
+      onCancel={onClose}
+      title={<ModalTitle description={event ? t('event.updateDetails') : t('event.createDetails')} title={event ? t('event.edit') : t('event.create')} />}
+      width={640}
+      styles={{ body: { maxHeight: 'calc(90vh - 140px)', overflowY: 'auto', paddingTop: 8 } }}
+    >
+      <Form layout="vertical" onFinish={handleSubmit(handleFormSubmit)}>
+        <Form.Item required label={t('event.title')} validateStatus={errors.title ? 'error' : undefined} help={errors.title?.message}>
+          <Controller control={control} name="title" render={({ field }) => <Input {...field} placeholder={t('event.titlePlaceholder')} />} />
+        </Form.Item>
 
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('event.title')} *
-            </label>
-            <input
-              {...register('title')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={t('event.titlePlaceholder')}
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-500">{errors.title.message}</p>
-            )}
-          </div>
+        <Form.Item label={t('event.description')} validateStatus={errors.description ? 'error' : undefined} help={errors.description?.message}>
+          <Controller control={control} name="description" render={({ field }) => <TextArea {...field} value={field.value ?? ''} autoSize={{ minRows: 3, maxRows: 5 }} placeholder={t('event.descriptionPlaceholder')} />} />
+        </Form.Item>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('event.description')}
-            </label>
-            <textarea
-              {...register('description')}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder={t('event.descriptionPlaceholder')}
-            />
-          </div>
+        <Form.Item label={t('event.allDay')}>
+          <Controller control={control} name="all_day" render={({ field }) => <Switch checked={field.value} onChange={field.onChange} />} />
+        </Form.Item>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="all_day"
-              {...register('all_day')}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="all_day" className="text-sm text-gray-700 dark:text-gray-300">
-              {t('event.allDay')}
-            </label>
-          </div>
+        <Row gutter={16}>
+          <Col xs={24} md={12}>
+            <Form.Item label={<FieldLabel icon={<Calendar size={14} />}>{t('event.start')}</FieldLabel>} validateStatus={errors.start_datetime ? 'error' : undefined} help={errors.start_datetime?.message}>
+              <Controller control={control} name="start_datetime" render={({ field }) => <DateTimePicker allDay={isAllDay} onChange={field.onChange} value={field.value} />} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item label={<FieldLabel icon={<Clock size={14} />}>{t('event.end')}</FieldLabel>} validateStatus={errors.end_datetime ? 'error' : undefined} help={errors.end_datetime?.message}>
+              <Controller control={control} name="end_datetime" render={({ field }) => <DateTimePicker allDay={isAllDay} onChange={field.onChange} value={field.value} />} />
+            </Form.Item>
+          </Col>
+        </Row>
 
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                 <div className="flex items-center gap-1">
-                   <Calendar size={14} />
-                    {t('event.start')}
-                 </div>
-               </label>
-               <input
-                 type={isAllDay ? 'date' : 'datetime-local'}
-                 {...register('start_datetime')}
-                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-               />
-             </div>
-             <div>
-               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                 <div className="flex items-center gap-1">
-                   <Clock size={14} />
-                    {t('event.end')}
-                 </div>
-               </label>
-               <input
-                 type={isAllDay ? 'date' : 'datetime-local'}
-                 {...register('end_datetime')}
-                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-               />
-             </div>
-           </div>
+        <Form.Item label={t('event.type')}>
+          <Controller control={control} name="event_type" render={({ field }) => <Select {...field} options={eventTypeOptions} />} />
+        </Form.Item>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('event.type')}
-            </label>
-            <div className="flex gap-2">
-              {eventTypes.map((type) => {
-                const isSelected = selectedType === type.value
-                const colorClasses = {
-                  purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
-                  blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
-                  green: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-                }
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setValue('event_type', type.value as EventFormData['event_type'])}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                      isSelected
-                        ? colorClasses[type.color as keyof typeof colorClasses]
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {t(type.labelKey)}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+        <Form.Item label={<FieldLabel icon={<Palette size={14} />}>{t('event.color')}</FieldLabel>}>
+          <Controller control={control} name="color" render={({ field }) => <ColorRadioGroup onChange={field.onChange} t={t} value={field.value ?? DEFAULT_EVENT_COLOR} />} />
+        </Form.Item>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <div className="flex items-center gap-1">
-                <Palette size={14} />
-                {t('event.color')}
-              </div>
-            </label>
-            <div className="flex gap-2">
-              {colorOptions.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => setValue('color', color.value)}
-                  className={`w-8 h-8 rounded-full transition-transform ${
-                    selectedColor === color.value ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                  title={t(color.labelKey)}
+        <Form.Item label={<FieldLabel icon={<Bell size={14} />}>{t('event.reminder')}</FieldLabel>}>
+          <Controller control={control} name="reminder_minutes_before" render={({ field }) => <ReminderSelect onChange={field.onChange} t={t} value={field.value} />} />
+        </Form.Item>
+
+        <Form.Item>
+          <Button type="link" icon={<Repeat size={16} />} aria-expanded={showRecurrence} onClick={() => setShowRecurrence(!showRecurrence)}>
+            {t('event.recurrence')}
+          </Button>
+        </Form.Item>
+
+        {selectedType === 'checklist' && (
+          <Form.Item label={<FieldLabel icon={<Link2 size={14} />}>{t('event.linkTemplate')}</FieldLabel>}>
+            <Controller
+              control={control}
+              name="checklist_template"
+              render={({ field }) => (
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  options={checklistOptions}
+                  value={field.value === null ? NO_TEMPLATE_VALUE : String(field.value)}
+                  onChange={value => field.onChange(value === NO_TEMPLATE_VALUE ? null : Number(value))}
                 />
-              ))}
-            </div>
-          </div>
+              )}
+            />
+          </Form.Item>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              <div className="flex items-center gap-1">
-                <Bell size={14} />
-                {t('event.reminder')}
-              </div>
-            </label>
-          <select
-                {...register('reminder_minutes_before', {
-                  setValueAs: (value) => value === '' ? null : Number(value)
-                })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {reminderOptions.map((option) => (
-                  <option key={option.labelKey} value={option.value ?? ''}>
-                    {t(option.labelKey)}
-                  </option>
-                ))}
-              </select>
-          </div>
-
-          <div>
-            <button
-              type="button"
-              onClick={() => setShowRecurrence(!showRecurrence)}
-              className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              <Repeat size={16} />
-              {t('event.recurrence')}
-            </button>
-          </div>
-
-          {selectedType === 'checklist' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                <div className="flex items-center gap-1">
-                  <Link2 size={14} />
-                  {t('event.linkTemplate')}
-                </div>
-              </label>
-              <select
-                {...register('checklist_template', {
-                  setValueAs: (value) => value === '' ? null : Number(value)
-                })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">{t('event.selectTemplate')}</option>
-                {(checklistsData?.items ?? []).map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.name || tpl.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-            >
-              {t('event.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
-            >
-              {event ? t('event.update') : t('event.submitCreate')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+          <Button onClick={onClose}>{t('event.cancel')}</Button>
+          <Button type="primary" htmlType="submit" loading={isSubmitting}>
+            {event ? t('event.update') : t('event.submitCreate')}
+          </Button>
+        </div>
+      </Form>
+    </Modal>
   )
+}
+
+function createDefaultValues(defaultDate?: Date): EventFormData {
+  const date = defaultDate ?? new Date()
+  return {
+    title: '',
+    description: '',
+    start_datetime: formatDateTime(date),
+    end_datetime: formatDateTime(date),
+    all_day: false,
+    color: DEFAULT_EVENT_COLOR,
+    reminder_minutes_before: null,
+    event_type: 'custom',
+    checklist_template: null,
+  }
+}
+
+function formatDateTime(date: Date) {
+  return dayjs(date).format(DATE_TIME_FORMAT)
 }
 
 function createEventSchema(t: Translate) {
@@ -349,8 +233,146 @@ function createEventSchema(t: Translate) {
     title: z.string().min(1, t('event.validationTitleRequired')).max(200),
   }).refine((data) => {
     if (!data.start_datetime || !data.end_datetime) return true
+    if (data.all_day) return isSameOrLaterDate(data.end_datetime, data.start_datetime)
     return new Date(data.end_datetime) > new Date(data.start_datetime)
   }, { message: t('event.validationEndAfterStart'), path: ['end_datetime'] })
+}
+
+function isSameOrLaterDate(endDateTime: string, startDateTime: string) {
+  const endDate = dayjs(endDateTime).startOf('day')
+  const startDate = dayjs(startDateTime).startOf('day')
+  return endDate.isSame(startDate) || endDate.isAfter(startDate)
+}
+
+interface ModalTitleProps {
+  title: string
+  description: string
+}
+
+function ModalTitle({ title, description }: ModalTitleProps) {
+  return (
+    <Space direction="vertical" size={0}>
+      <span>{title}</span>
+      <Text type="secondary" style={{ fontSize: 14, fontWeight: 400 }}>
+        {description}
+      </Text>
+    </Space>
+  )
+}
+
+interface FieldLabelProps {
+  icon: ReactNode
+  children: ReactNode
+}
+
+function FieldLabel({ icon, children }: FieldLabelProps) {
+  return (
+    <Space size={4}>
+      {icon}
+      <span>{children}</span>
+    </Space>
+  )
+}
+
+interface DateTimePickerProps {
+  allDay: boolean
+  value: string
+  onChange: (value: string) => void
+}
+
+function DateTimePicker({ allDay, value, onChange }: DateTimePickerProps) {
+  return (
+    <Space.Compact style={{ width: '100%' }}>
+      <DateInput value={value} onChange={date => onChange(setDatePart(value, date))} />
+      {!allDay && <TimeInput value={value} onChange={time => onChange(setTimePart(value, time))} />}
+    </Space.Compact>
+  )
+}
+
+function DateInput({ value, onChange }: { value: string; onChange: (date: Dayjs | null) => void }) {
+  return <Form.Item noStyle><InputDatePicker value={getDateValue(value)} onChange={onChange} /></Form.Item>
+}
+
+function TimeInput({ value, onChange }: { value: string; onChange: (time: Dayjs | null) => void }) {
+  return <Form.Item noStyle><InputTimePicker value={getTimeValue(value)} onChange={onChange} /></Form.Item>
+}
+
+function InputDatePicker(props: { value: Dayjs | null; onChange: (date: Dayjs | null) => void }) {
+  return <DatePicker {...props} allowClear={false} format={DATE_FORMAT} style={{ width: '100%' }} />
+}
+
+function InputTimePicker(props: { value: Dayjs | null; onChange: (time: Dayjs | null) => void }) {
+  return <TimePicker {...props} allowClear={false} format={TIME_FORMAT} style={{ width: '100%' }} />
+}
+
+function getDateValue(value: string) {
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed : null
+}
+
+function getTimeValue(value: string) {
+  const parsed = dayjs(value)
+  return parsed.isValid() ? parsed : null
+}
+
+function setDatePart(currentValue: string, date: Dayjs | null) {
+  if (!date) return currentValue
+  const time = getTimeValue(currentValue)?.format(TIME_FORMAT) ?? DEFAULT_EVENT_TIME
+  return `${date.format(DATE_FORMAT)}T${time}`
+}
+
+function setTimePart(currentValue: string, time: Dayjs | null) {
+  if (!time) return currentValue
+  const date = getDateValue(currentValue)?.format(DATE_FORMAT) ?? dayjs().format(DATE_FORMAT)
+  return `${date}T${time.format(TIME_FORMAT)}`
+}
+
+interface ColorRadioGroupProps {
+  value: string
+  onChange: (value: string) => void
+  t: Translate
+}
+
+function ColorRadioGroup({ value, onChange, t }: ColorRadioGroupProps) {
+  return (
+    <Radio.Group value={value} onChange={event => onChange(event.target.value)}>
+      <Space size={[8, 8]} wrap>
+        {colorOptions.map(color => <ColorRadioButton key={color.value} color={color} t={t} />)}
+      </Space>
+    </Radio.Group>
+  )
+}
+
+function ColorRadioButton({ color, t }: { color: (typeof colorOptions)[number]; t: Translate }) {
+  return (
+    <Radio.Button value={color.value}>
+      <Space size={6}>
+        <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: color.value }} />
+        {t(color.labelKey)}
+      </Space>
+    </Radio.Button>
+  )
+}
+
+interface ReminderSelectProps {
+  value: number | null
+  onChange: (value: number | null) => void
+  t: Translate
+}
+
+function ReminderSelect({ value, onChange, t }: ReminderSelectProps) {
+  const options = reminderOptions.map(option => ({
+    value: option.value === null ? NO_REMINDER_VALUE : String(option.value),
+    label: t(option.labelKey),
+  }))
+
+  return (
+    <Select
+      options={options}
+      value={value === null ? NO_REMINDER_VALUE : String(value)}
+      onChange={nextValue => onChange(nextValue === NO_REMINDER_VALUE ? null : Number(nextValue))}
+    />
+  )
 }
 
 export default EventModal

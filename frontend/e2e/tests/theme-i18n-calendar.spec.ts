@@ -116,7 +116,7 @@ test.describe('Theme, i18n, and calendar readability', () => {
 
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.locator('.calendar-shell')).toBeVisible()
-    await expect(page.locator('.rbc-month-view')).toBeVisible()
+    await expect(page.locator('.checkix-ant-calendar')).toBeVisible()
     await expect(page.getByRole('button', { name: /new event/i })).toBeVisible()
 
     const calendarBackground = await page.locator('.calendar-shell').evaluate((element) => {

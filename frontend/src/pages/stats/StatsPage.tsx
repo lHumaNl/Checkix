@@ -1,93 +1,117 @@
 import { useState } from 'react'
-import { BarChart3, TrendingUp, CheckSquare, Clock, Award, Layers } from 'lucide-react'
+import type { ReactNode } from 'react'
+import {
+  AppstoreOutlined,
+  BarChartOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  DownloadOutlined,
+  RiseOutlined,
+  TrophyOutlined,
+} from '@ant-design/icons'
+import { Alert, Button, Card, DatePicker, Empty, Flex, Progress, Skeleton, Space, Statistic, Table, Typography } from 'antd'
+import type { TableColumnsType } from 'antd'
+import dayjs from 'dayjs'
+import type { Dayjs } from 'dayjs'
 import { useOverallStats, useTopTemplates, useStatsByCategory, useRecentStats } from '@/api/useStats'
 import { useExportStatsCSV } from '@/api/useCompletionData'
 import { useI18n } from '@/i18n'
 
-function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
-}
+const { RangePicker } = DatePicker
+const { Text, Title } = Typography
 
-function getDefaultRange() {
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - 30)
-  return { start: formatDate(start), end: formatDate(end) }
+const DATE_FORMAT = 'YYYY-MM-DD'
+const EMPTY_VALUE = '—'
+const HIGH_RATE_THRESHOLD = 80
+const MEDIUM_RATE_THRESHOLD = 50
+const RECENT_ACTIVITY_LIMIT = 14
+const PRESET_DAYS = [7, 30, 90]
+
+type RangePickerValue = [Dayjs | null, Dayjs | null] | null
+
+interface RecentDayRow {
+  completed: number
+  created: number
+  date: string
+  rate: number | null
 }
 
 interface StatCardProps {
-  icon: React.ReactNode
+  icon: ReactNode
   label: string
-  value: string | number
+  value: number
   sub?: string
+  suffix?: string
 }
 
-function StatCard({ icon, label, value, sub }: StatCardProps) {
+function getDefaultRange(): [Dayjs, Dayjs] {
+  return [dayjs().subtract(30, 'day'), dayjs()]
+}
+
+function formatDate(date: Dayjs): string {
+  return date.format(DATE_FORMAT)
+}
+
+function clampPercent(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value)))
+}
+
+function getRateTextType(rate: number | null): 'secondary' | 'success' | 'warning' | undefined {
+  if (rate === null) return undefined
+  if (rate >= HIGH_RATE_THRESHOLD) return 'success'
+  if (rate >= MEDIUM_RATE_THRESHOLD) return 'warning'
+  return 'secondary'
+}
+
+function StatCard({ icon, label, sub, suffix, value }: StatCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-          {icon}
-        </div>
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</span>
-      </div>
-      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-      {sub && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{sub}</p>}
-    </div>
+    <Card style={{ height: '100%' }}>
+      <Statistic prefix={icon} title={label} value={value} suffix={suffix} />
+      {sub && <Text type="secondary">{sub}</Text>}
+    </Card>
   )
 }
 
-interface CompletionBarProps {
-  value: number
-  color?: string
-}
-
-function CompletionBar({ value, color = 'bg-blue-500' }: CompletionBarProps) {
+function StatSkeletonGrid() {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-        <div
-          className={`${color} h-2 rounded-full transition-all`}
-          style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-        />
-      </div>
-      <span className="text-xs text-gray-600 dark:text-gray-400 w-10 text-right">
-        {value.toFixed(0)}%
-      </span>
+    <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+      {Array.from({ length: 4 }).map((_, index) => (
+        <Card key={index}>
+          <Skeleton active paragraph={{ rows: 1 }} title={{ width: '60%' }} />
+        </Card>
+      ))}
     </div>
   )
 }
 
 export function StatsPage() {
   const { t } = useI18n()
-  const defaultRange = getDefaultRange()
-  const [startDate, setStartDate] = useState(defaultRange.start)
-  const [endDate, setEndDate] = useState(defaultRange.end)
-  const [appliedStart, setAppliedStart] = useState(defaultRange.start)
-  const [appliedEnd, setAppliedEnd] = useState(defaultRange.end)
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>(() => getDefaultRange())
+  const [appliedRange, setAppliedRange] = useState<[Dayjs, Dayjs]>(() => getDefaultRange())
+  const appliedStart = formatDate(appliedRange[0])
+  const appliedEnd = formatDate(appliedRange[1])
 
-  const { data: overall, isLoading: overallLoading } = useOverallStats(appliedStart, appliedEnd)
-  const { data: categoryStats, isLoading: categoryLoading } = useStatsByCategory(appliedStart, appliedEnd)
-  const { data: recentStats, isLoading: recentLoading } = useRecentStats(30)
-  const { data: topTemplatesData, isLoading: topLoading } = useTopTemplates(appliedStart, appliedEnd)
+  const { data: overall, error: overallError, isLoading: overallLoading } = useOverallStats(appliedStart, appliedEnd)
+  const { data: categoryStats, error: categoryError, isLoading: categoryLoading } = useStatsByCategory(appliedStart, appliedEnd)
+  const { data: recentStats, error: recentError, isLoading: recentLoading } = useRecentStats(30)
+  const { data: topTemplatesData, error: topError, isLoading: topLoading } = useTopTemplates(appliedStart, appliedEnd)
   const exportMutation = useExportStatsCSV()
+  const hasError = Boolean(overallError || categoryError || recentError || topError)
 
   function applyRange() {
-    if (startDate > endDate) return
-    setAppliedStart(startDate)
-    setAppliedEnd(endDate)
+    if (dateRange[0].isAfter(dateRange[1], 'day')) return
+    setAppliedRange(dateRange)
+  }
+
+  function handleRangeChange(value: RangePickerValue) {
+    if (!value?.[0] || !value[1]) return
+    setDateRange([value[0], value[1]])
   }
 
   function setPreset(days: number) {
-    const end = new Date()
-    const start = new Date()
-    start.setDate(start.getDate() - days)
-    const s = formatDate(start)
-    const e = formatDate(end)
-    setStartDate(s)
-    setEndDate(e)
-    setAppliedStart(s)
-    setAppliedEnd(e)
+    const nextRange: [Dayjs, Dayjs] = [dayjs().subtract(days, 'day'), dayjs()]
+    setDateRange(nextRange)
+    setAppliedRange(nextRange)
   }
 
   const topTemplates = topTemplatesData ?? []
@@ -106,240 +130,154 @@ export function StatsPage() {
     },
     {}
   )
-  const recentDays = Object.entries(recentByDay)
+  const recentRows: RecentDayRow[] = Object.entries(recentByDay)
     .sort(([a], [b]) => b.localeCompare(a))
-    .slice(0, 14)
+    .slice(0, RECENT_ACTIVITY_LIMIT)
+    .map(([date, vals]) => ({
+      date,
+      created: vals.created,
+      completed: vals.completed,
+      rate: vals.created > 0 ? clampPercent((vals.completed / vals.created) * 100) : null,
+    }))
+
+  const recentColumns: TableColumnsType<RecentDayRow> = [
+    { title: t('stats.date'), dataIndex: 'date', key: 'date' },
+    { title: t('stats.created'), dataIndex: 'created', key: 'created', align: 'right' },
+    { title: t('stats.completed'), dataIndex: 'completed', key: 'completed', align: 'right' },
+    {
+      title: t('stats.rate'),
+      dataIndex: 'rate',
+      key: 'rate',
+      align: 'right',
+      render: (rate: number | null) => (
+        <Text strong={rate !== null} type={getRateTextType(rate)}>
+          {rate === null ? EMPTY_VALUE : `${rate}%`}
+        </Text>
+      ),
+    },
+  ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stats.title')}</h1>
-        <button
+    <Space direction="vertical" size="large" style={{ display: 'flex' }}>
+      <Flex align="center" gap="middle" justify="space-between" wrap>
+        <Title level={2} style={{ margin: 0 }}>{t('stats.title')}</Title>
+        <Button
+          icon={<DownloadOutlined />}
+          loading={exportMutation.isPending}
           onClick={() => exportMutation.mutate({ startDate: appliedStart, endDate: appliedEnd })}
-          disabled={exportMutation.isPending}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+          type="primary"
         >
           {exportMutation.isPending ? t('stats.exporting') : t('dashboard.exportCsv')}
-        </button>
-      </div>
+        </Button>
+      </Flex>
 
-      {/* Date range filter */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              {t('common.startDate')}
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              max={endDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-              {t('common.endDate')}
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              min={startDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            />
-          </div>
-          <button
-            onClick={applyRange}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-          >
-            {t('common.apply')}
-          </button>
-          <div className="flex gap-2 ml-2">
-            {[7, 30, 90].map(d => (
-              <button
-                key={d}
-                onClick={() => setPreset(d)}
-                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                {d}d
-              </button>
+      <Card>
+        <Flex align="center" gap="small" wrap>
+          <RangePicker
+            allowClear={false}
+            format={DATE_FORMAT}
+            onChange={handleRangeChange}
+            value={dateRange}
+          />
+          <Button onClick={applyRange} type="primary">{t('common.apply')}</Button>
+          <Space wrap>
+            {PRESET_DAYS.map(days => (
+              <Button key={days} onClick={() => setPreset(days)}>
+                {days}d
+              </Button>
             ))}
-          </div>
-        </div>
-      </div>
+          </Space>
+        </Flex>
+      </Card>
 
-      {/* Overall stats cards */}
+      {hasError && <Alert message={t('common.failedRefresh')} showIcon type="error" />}
+
       {overallLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse" />
-          ))}
-        </div>
+        <StatSkeletonGrid />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+        <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
           <StatCard
-            icon={<Layers size={18} />}
+            icon={<AppstoreOutlined />}
             label={t('stats.templatesUsed')}
             value={overall?.total_templates ?? 0}
           />
           <StatCard
-            icon={<CheckSquare size={18} />}
+            icon={<CheckCircleOutlined />}
             label={t('stats.instancesCreated')}
             value={overall?.total_instances_created ?? 0}
             sub={t('stats.inSelectedPeriod')}
           />
           <StatCard
-            icon={<TrendingUp size={18} />}
+            icon={<RiseOutlined />}
             label={t('stats.completed')}
             value={overall?.total_instances_completed ?? 0}
           />
           <StatCard
-            icon={<BarChart3 size={18} />}
+            icon={<BarChartOutlined />}
             label={t('stats.completionRate')}
-            value={`${overall?.avg_completion_rate ?? 0}%`}
+            value={overall?.avg_completion_rate ?? 0}
+            suffix="%"
           />
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        {/* Top Templates */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <Award size={18} className="text-yellow-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('stats.topTemplates')}</h2>
-          </div>
+      <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+        <Card title={<Space><TrophyOutlined />{t('stats.topTemplates')}</Space>}>
           {topLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-              ))}
-            </div>
+            <Skeleton active paragraph={{ rows: 5 }} title={false} />
           ) : topTemplates.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-              {t('stats.noPeriodData')}
-            </p>
+            <Empty description={t('stats.noPeriodData')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <div className="space-y-3">
-              {topTemplates.map((t, i) => (
-                <div key={t.template_id}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-bold text-gray-400 dark:text-gray-500 w-5 shrink-0">
-                        #{i + 1}
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                        {t.template_name}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-2">
-                      {t.total_instances} runs
-                    </span>
-                  </div>
-                  <CompletionBar
-                    value={t.completion_rate}
-                    color={i === 0 ? 'bg-yellow-400' : i === 1 ? 'bg-gray-400' : 'bg-blue-400'}
-                  />
+            <Space direction="vertical" size="middle" style={{ display: 'flex' }}>
+              {topTemplates.map((template, index) => (
+                <div key={template.template_id}>
+                  <Flex gap="small" justify="space-between" wrap>
+                    <Text strong>#{index + 1} {template.template_name}</Text>
+                    <Text type="secondary">{t('stats.runs', { count: template.total_instances })}</Text>
+                  </Flex>
+                  <Progress percent={clampPercent(template.completion_rate)} size="small" />
                 </div>
               ))}
-            </div>
+            </Space>
           )}
-        </div>
+        </Card>
 
-        {/* By Category */}
-        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5 h-full flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={18} className="text-purple-500" />
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t('stats.byCategory')}</h2>
-          </div>
+        <Card title={<Space><BarChartOutlined />{t('stats.byCategory')}</Space>}>
           {categoryLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-              ))}
-            </div>
+            <Skeleton active paragraph={{ rows: 4 }} title={false} />
           ) : categoryData.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-              {t('stats.noCategoryData')}
-            </p>
+            <Empty description={t('stats.noCategoryData')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <div className="space-y-3">
-              {categoryData.map(c => {
-                const total = c.total_instances ?? 0
-                const completed = c.total_completed ?? 0
+            <Space direction="vertical" size="middle" style={{ display: 'flex' }}>
+              {categoryData.map(category => {
+                const total = category.total_instances ?? 0
+                const completed = category.total_completed ?? 0
                 const rate = total > 0 ? (completed / total) * 100 : 0
-                const label = c.community_template__category ?? 'Uncategorized'
+                const label = category.community_template__category ?? t('stats.uncategorized')
                 return (
                   <div key={label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200 capitalize">
-                        {label}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {completed}/{total}
-                      </span>
-                    </div>
-                    <CompletionBar value={rate} color="bg-purple-500" />
+                    <Flex justify="space-between" wrap>
+                      <Text strong>{label}</Text>
+                      <Text type="secondary">{completed}/{total}</Text>
+                    </Flex>
+                    <Progress percent={clampPercent(rate)} size="small" />
                   </div>
                 )
               })}
-            </div>
+            </Space>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock size={18} className="text-green-500" />
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            {t('stats.recentActivity')}
-          </h2>
-        </div>
+      <Card title={<Space><ClockCircleOutlined />{t('stats.recentActivity')}</Space>}>
         {recentLoading ? (
-          <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-        ) : recentDays.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
-            {t('stats.noRecentActivity')}
-          </p>
+          <Skeleton active paragraph={{ rows: 4 }} title={false} />
+        ) : recentRows.length === 0 ? (
+          <Empty description={t('stats.noRecentActivity')} image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.date')}</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.created')}</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.completed')}</th>
-                  <th className="text-right pb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t('stats.rate')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {recentDays.map(([date, vals]) => {
-                  const rate = vals.created > 0 ? ((vals.completed / vals.created) * 100).toFixed(0) : '—'
-                  return (
-                    <tr key={date}>
-                      <td className="py-2 text-gray-700 dark:text-gray-300">{date}</td>
-                      <td className="py-2 text-right text-gray-700 dark:text-gray-300">{vals.created}</td>
-                      <td className="py-2 text-right text-gray-700 dark:text-gray-300">{vals.completed}</td>
-                      <td className="py-2 text-right">
-                        <span className={`font-medium ${rate !== '—' && parseInt(rate) >= 80
-                          ? 'text-green-600 dark:text-green-400'
-                          : rate !== '—' && parseInt(rate) >= 50
-                          ? 'text-yellow-600 dark:text-yellow-400'
-                          : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {rate !== '—' ? `${rate}%` : rate}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Table columns={recentColumns} dataSource={recentRows} pagination={false} rowKey="date" size="small" />
         )}
-      </div>
-    </div>
+      </Card>
+    </Space>
   )
 }

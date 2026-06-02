@@ -1,12 +1,8 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/Modal/Dialog'
-import { AlertTriangle } from 'lucide-react'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
+import { Button, Modal, Space, Typography } from 'antd'
+import { useI18n } from '@/i18n'
+
+const CONFIRM_DIALOG_WIDTH = 425
 
 interface ConfirmDialogProps {
   open: boolean
@@ -19,60 +15,103 @@ interface ConfirmDialogProps {
   onConfirm: () => void
 }
 
+interface ConfirmDialogContentProps {
+  description?: string
+  isDestructive: boolean
+  title: string
+}
+
+interface ConfirmDialogFooterProps {
+  cancelLabel: string
+  confirmLabel: string
+  isDestructive: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+function ConfirmDialogContent({
+  description,
+  isDestructive,
+  title,
+}: ConfirmDialogContentProps) {
+  return (
+    <Space align="start" size={12}>
+      {isDestructive && <ExclamationCircleOutlined className="mt-1 text-xl text-red-500" />}
+      <div>
+        <Typography.Title className="mb-1" level={5}>
+          {title}
+        </Typography.Title>
+        {description && (
+          <Typography.Paragraph className="mb-0" type="secondary">
+            {description}
+          </Typography.Paragraph>
+        )}
+      </div>
+    </Space>
+  )
+}
+
+function ConfirmDialogFooter({
+  cancelLabel,
+  confirmLabel,
+  isDestructive,
+  onCancel,
+  onConfirm,
+}: ConfirmDialogFooterProps) {
+  return (
+    <Space>
+      <Button onClick={onCancel}>{cancelLabel}</Button>
+      <Button danger={isDestructive} type="primary" onClick={onConfirm}>
+        {confirmLabel}
+      </Button>
+    </Space>
+  )
+}
+
 export function ConfirmDialog({
   open,
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   variant = 'default',
   onConfirm,
 }: ConfirmDialogProps) {
+  const { t } = useI18n()
+  const isDestructive = variant === 'destructive'
+  const resolvedConfirmLabel = confirmLabel ?? t('common.yes')
+  const resolvedCancelLabel = cancelLabel ?? t('common.cancel')
+  const handleCancel = () => onOpenChange(false)
+
   const handleConfirm = () => {
     onConfirm()
     onOpenChange(false)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            {variant === 'destructive' && (
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
-                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-              </div>
-            )}
-            <div>
-              <DialogTitle>{title}</DialogTitle>
-              {description && (
-                <DialogDescription className="mt-1">
-                  {description}
-                </DialogDescription>
-              )}
-            </div>
-          </div>
-        </DialogHeader>
-        <DialogFooter>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={handleConfirm}
-            className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
-              variant === 'destructive'
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {confirmLabel}
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      centered
+      destroyOnHidden
+      footer={
+        <ConfirmDialogFooter
+          cancelLabel={resolvedCancelLabel}
+          confirmLabel={resolvedConfirmLabel}
+          isDestructive={isDestructive}
+          onCancel={handleCancel}
+          onConfirm={handleConfirm}
+        />
+      }
+      onCancel={handleCancel}
+      open={open}
+      title={null}
+      width={CONFIRM_DIALOG_WIDTH}
+    >
+      <ConfirmDialogContent
+        description={description}
+        isDestructive={isDestructive}
+        title={title}
+      />
+    </Modal>
   )
 }
