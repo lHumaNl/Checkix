@@ -147,7 +147,7 @@ describe('AuthContext', () => {
 
   it('handles login failure', async () => {
     server.use(
-      http.post('/api/v1/auth/token/', () => {
+      http.post('/api/auth/token/', () => {
         return new HttpResponse(null, { status: 401 })
       })
     )
@@ -156,7 +156,7 @@ describe('AuthContext', () => {
     const Wrapper = createWrapper()
     
     const LoginWithStatus = () => {
-      const { login, isAuthenticated, error } = useAuth()
+      const { login, isAuthenticated } = useAuth()
       const [loginError, setLoginError] = React.useState<string | null>(null)
       
       const handleLogin = async () => {
@@ -197,7 +197,7 @@ describe('AuthContext', () => {
     localStorage.setItem('refresh_token', 'invalid-refresh-token')
     
     server.use(
-      http.post('/api/v1/auth/token/refresh/', () => {
+      http.post('/api/auth/token/refresh/', () => {
         return new HttpResponse(null, { status: 401 })
       })
     )

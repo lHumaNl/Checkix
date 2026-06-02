@@ -20,8 +20,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from checkix.models.tag import Tag  # noqa: F401

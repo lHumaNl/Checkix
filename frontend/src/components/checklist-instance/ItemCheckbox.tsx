@@ -35,9 +35,17 @@ export function ItemCheckbox({
           ? 'opacity-50 cursor-not-allowed'
           : 'hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer'
       }`}
-      onClick={() => !disabled && onToggle()}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        if (!disabled) onToggle()
+      }}
     >
       <motion.button
+        type="button"
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          if (!disabled) onToggle()
+        }}
         whileTap={{ scale: 0.9 }}
         className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
           isChecked
@@ -62,6 +70,10 @@ export function ItemCheckbox({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <motion.p
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              if (!disabled) onToggle()
+            }}
             animate={{
               color: isChecked ? '#9ca3af' : undefined,
             }}

@@ -10,11 +10,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from checkix.database import engine
+from checkix.database import dispose_engine, get_engine
 from checkix.exceptions import (
     CheckixException,
     register_exception_handlers,
 )
+from checkix.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +33,14 @@ async def lifespan(app: FastAPI) -> AsyncGen[None, None]:
     # Verify database connectivity
     from sqlalchemy import text
 
-    async with engine.connect() as conn:
+    async with get_engine().connect() as conn:
         await conn.execute(text("SELECT 1"))
     logger.info("Database connection verified")
 
     yield
 
     # Shutdown --------------------------------------------------------------
-    await engine.dispose()
+    await dispose_engine()
     logger.info("Checkix shutting down ...")
 
 
@@ -60,7 +61,7 @@ def create_app() -> FastAPI:
     # -- Middleware ----------------------------------------------------------
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

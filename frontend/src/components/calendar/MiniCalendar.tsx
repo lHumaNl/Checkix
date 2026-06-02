@@ -24,7 +24,7 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
 
   const hasEventOnDay = (date: Date) => {
     if (!Array.isArray(events)) return false
-    return events.some((event) => isSameDay(new Date(event.start_time), date))
+    return events.some((event) => isSameDay(new Date(event.start_datetime), date))
   }
 
   const handlePrevMonth = () => {

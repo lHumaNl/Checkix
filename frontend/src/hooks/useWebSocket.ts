@@ -32,7 +32,7 @@ export function useWebSocket({
     let wsUrl: string
     try {
       // Use a short-lived one-time ticket so the JWT never appears in the WS URL
-      const { data } = await axios.get('/api/v1/users/ws-ticket/', {
+      const { data } = await axios.get('/api/users/ws-ticket/', {
         headers: { Authorization: `Bearer ${token}` },
       })
       wsUrl = `${url}${url.includes('?') ? '&' : '?'}ticket=${data.ticket}`

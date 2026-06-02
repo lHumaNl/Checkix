@@ -48,7 +48,7 @@ function EventComponent({ event, onEventClick }: EventProps<FormattedEvent> & { 
       onClick={() => onEventClick(event.resource)}
     >
       <div className="truncate font-medium">{event.resource.title}</div>
-      {!event.resource.is_all_day && (
+      {!event.resource.all_day && (
         <div className="truncate opacity-75">
           {format(event.start, 'HH:mm')} - {format(event.end, 'HH:mm')}
         </div>
@@ -64,8 +64,8 @@ export function CalendarView({ events, onEventClick, onCreateEvent, currentDate:
 
   const formattedEvents: FormattedEvent[] = useMemo(() => {
     return events.map((event) => ({
-      start: new Date(event.start_time),
-      end: new Date(event.end_time),
+      start: new Date(event.start_datetime),
+      end: new Date(event.end_datetime ?? event.start_datetime),
       resource: event,
     }))
   }, [events])

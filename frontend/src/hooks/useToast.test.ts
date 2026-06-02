@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { reducer, toast } from '@/hooks/useToast'
-import { renderHook, act } from '@testing-library/react'
 import type { ToastProps } from '@/components/ui/Toast'
+import type { ReactNode } from 'react'
 
 type ToasterToast = ToastProps & {
   id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
+  title?: ReactNode
+  description?: ReactNode
 }
 
 const createToast = (id: string, title: string): ToasterToast => ({

@@ -1,33 +1,35 @@
-.PHONY: help install migrate test lint format run clean docker-up docker-down docker-build docker-logs shell createsuperuser collectstatic requirements
+.PHONY: help install install-prod migrate migrations test test-cov lint type-check format format-check run clean docker-up docker-down docker-build docker-logs check dev-setup
 
 SHELL := /bin/bash
-PYTHON := python
-MANAGE := $(PYTHON) scripts/manage.py
-PIP := pip
-PYTEST := pytest
+PYTHON := $(shell if [ -x venv/bin/python ]; then printf 'venv/bin/python'; else printf 'python3'; fi)
+PIP := $(PYTHON) -m pip
+PYTEST := $(PYTHON) -m pytest
+RUFF := $(PYTHON) -m ruff
+MYPY := $(PYTHON) -m mypy
+APP := checkix.main:app
+HOST ?= 0.0.0.0
+PORT ?= 8000
 
 help:
 	@echo "Checkix - Available commands:"
 	@echo ""
 	@echo "Setup & Installation:"
-	@echo "  make install          Install dependencies"
-	@echo "  make requirements      Generate requirements.txt from pyproject"
+	@echo "  make install          Install project with development dependencies"
+	@echo "  make install-prod     Install production dependencies"
 	@echo ""
 	@echo "Database:"
-	@echo "  make migrate          Run database migrations"
-	@echo "  make migrations        Create new migrations"
-	@echo "  make reset-db         Reset database (WARNING: destroys data)"
+	@echo "  make migrate          Apply Alembic migrations"
+	@echo "  make migrations       Create an Alembic revision (MSG='message')"
 	@echo ""
 	@echo "Development:"
-	@echo "  make run              Start development server"
-	@echo "  make shell            Open Django shell"
-	@echo "  make createsuperuser  Create admin user"
+	@echo "  make run              Start FastAPI development server"
 	@echo ""
 	@echo "Testing & Quality:"
 	@echo "  make test             Run all tests"
 	@echo "  make test-cov         Run tests with coverage report"
-	@echo "  make lint             Run linting (flake8, mypy)"
-	@echo "  make format           Format code (black, isort)"
+	@echo "  make lint             Run Ruff linting"
+	@echo "  make type-check       Run mypy"
+	@echo "  make format           Format code with Ruff"
 	@echo "  make check            Run all checks (lint, test)"
 	@echo ""
 	@echo "Docker:"
@@ -35,79 +37,52 @@ help:
 	@echo "  make docker-down      Stop Docker containers"
 	@echo "  make docker-build     Build Docker images"
 	@echo "  make docker-logs      View Docker logs"
-	@echo ""
-	@echo "Production:"
-	@echo "  make collectstatic    Collect static files"
 	@echo "  make clean            Remove generated files"
 
 install:
-	$(PIP) install -r requirements/development.txt
+	$(PIP) install -e ".[dev]"
 
 install-prod:
-	$(PIP) install -r requirements/production.txt
+	$(PIP) install .
 
 migrate:
-	$(MANAGE) migrate
+	$(PYTHON) -m alembic upgrade head
 
 migrations:
-	$(MANAGE) makemigrations
-
-reset-db:
-	@echo "WARNING: This will delete all data!"
-	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 1
-	$(MANAGE) reset_db --noinput
-	$(MAKE) migrate
+	@test -n "$(MSG)" || (echo "Usage: make migrations MSG='describe change'" && exit 1)
+	$(PYTHON) -m alembic revision --autogenerate -m "$(MSG)"
 
 run:
-	$(MANAGE) runserver
-
-run-plus:
-	$(MANAGE) runserver_plus
-
-shell:
-	$(MANAGE) shell
-
-shell-plus:
-	$(MANAGE) shell_plus
-
-createsuperuser:
-	$(MANAGE) createsuperuser
-
-collectstatic:
-	$(MANAGE) collectstatic --noinput
+	$(PYTHON) -m uvicorn $(APP) --host $(HOST) --port $(PORT) --reload
 
 test:
 	$(PYTEST) -v
 
 test-cov:
-	$(PYTEST) --cov=apps --cov-report=html --cov-report=term
-
-test-parallel:
-	$(PYTEST) -v -n auto
+	$(PYTEST) --cov=checkix --cov-report=html --cov-report=term
 
 lint:
-	flake8 apps config scripts
-	mypy apps config --ignore-missing-imports
+	$(RUFF) check src tests
+
+type-check:
+	$(MYPY) src/checkix --ignore-missing-imports
 
 format:
-	black apps config scripts
-	isort apps config scripts
+	$(RUFF) format src tests
+	$(RUFF) check --fix src tests
 
 format-check:
-	black --check apps config scripts
-	isort --check-only apps config scripts
+	$(RUFF) check src tests
 
 check: lint test
 
 clean:
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	find src tests alembic -type f -name "*.pyc" -delete
+	find src tests alembic -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -maxdepth 3 -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	rm -rf .pytest_cache
 	rm -rf .mypy_cache
 	rm -rf .coverage htmlcov
-	rm -rf staticfiles
 
 docker-up:
 	docker-compose up -d
@@ -130,43 +105,10 @@ docker-ps:
 docker-clean:
 	docker-compose down -v --remove-orphans
 
-celery-worker:
-	celery -A config worker -l info
-
-celery-beat:
-	celery -A config beat -l info
-
-celery-flower:
-	celery -A config flower
-
-db-shell:
-	$(MANAGE) dbshell
-
-dumpdata:
-	$(MANAGE) dumpdata --indent 2 > fixtures/dump.json
-
-loaddata:
-	$(MANAGE) loaddata fixtures/dump.json
-
-clear-cache:
-	$(MANAGE) clear_cache
-
-show-urls:
-	$(MANAGE) show_urls
-
-show-migrations:
-	$(MANAGE) showmigrations
-
-requirements:
-	pip-compile requirements/base.in -o requirements/base.txt
-	pip-compile requirements/development.in -o requirements/development.txt
-	pip-compile requirements/production.in -o requirements/production.txt
-
 dev-setup: install
 	cp -n .env.example .env 2>/dev/null || true
 	$(MAKE) migrate
 	@echo ""
 	@echo "Development setup complete!"
 	@echo "1. Edit .env with your settings"
-	@echo "2. Run 'make createsuperuser' to create an admin"
-	@echo "3. Run 'make run' to start the server"
+	@echo "2. Run 'make run' to start the server"

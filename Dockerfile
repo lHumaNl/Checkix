@@ -17,4 +17,4 @@ RUN mkdir -p /app/staticfiles /app/mediafiles
 
 EXPOSE 8000
 
-CMD ["uvicorn", "checkix.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["python", "-m", "uvicorn", "checkix.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

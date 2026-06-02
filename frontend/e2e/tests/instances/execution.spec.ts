@@ -176,7 +176,7 @@ test.describe('Instance Page - Edge Cases', () => {
   })
 
   test('shows not found for non-existent instance', async ({ page }) => {
-    await page.route('**/api/v1/checklist-instances/99999/', (route) => {
+    await page.route('**/api/instances/99999/', (route) => {
       route.fulfill({
         status: 404,
         contentType: 'application/json',

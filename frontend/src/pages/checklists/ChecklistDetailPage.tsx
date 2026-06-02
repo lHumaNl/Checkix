@@ -21,6 +21,11 @@ import { ChecklistFormModal } from './ChecklistFormModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { ChecklistDetailSkeleton } from '@/components/skeletons/ChecklistDetailSkeleton'
+import type { ChecklistItem } from '@/types'
+
+interface ChecklistVersionDetail {
+  items?: ChecklistItem[]
+}
 
 const statusColors = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -100,6 +105,10 @@ export function ChecklistDetailPage() {
     )
   }
 
+  const version = checklist.current_version as ChecklistVersionDetail | number | null | undefined
+  const versionItems = typeof version === 'object' ? version?.items ?? [] : []
+  const detailItems = versionItems.length > 0 ? versionItems : checklist.items ?? []
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -112,7 +121,7 @@ export function ChecklistDetailPage() {
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {checklist.title}
+              {checklist.title || checklist.name}
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[checklist.status || 'draft']}`}>
@@ -194,7 +203,7 @@ export function ChecklistDetailPage() {
               <CheckSquare size={16} className="text-gray-400" />
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Items</p>
-                <p className="font-medium text-gray-900 dark:text-white">{checklist.items_count ?? (checklist as Record<string, unknown>).current_version?.items?.length ?? 0}</p>
+                <p className="font-medium text-gray-900 dark:text-white">{checklist.items_count ?? detailItems.length}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -240,7 +249,7 @@ export function ChecklistDetailPage() {
             Checklist Items
           </h2>
           <div className="space-y-2">
-            {((checklist as Record<string, unknown>).current_version as { items?: { id: string; title: string; description?: string; is_required: boolean }[] } | undefined)?.items?.map((item, index) => (
+            {detailItems.map((item, index) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -253,7 +262,7 @@ export function ChecklistDetailPage() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {item.title}
+                    {item.title || item.content}
                     {item.is_required && (
                       <span className="text-red-500 ml-1">*</span>
                     )}

@@ -37,7 +37,7 @@ export function useCalendarEvent(id: number) {
 export function useCreateCalendarEvent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (event: Record<string, unknown>) => {
+    mutationFn: async (event: CalendarEventCreate) => {
       const { data } = await client.post<CalendarEvent>('/calendar-events', event)
       return data
     },

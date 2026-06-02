@@ -128,20 +128,6 @@ export function ChecklistInstancePage() {
     })
   }
 
-  const notesTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  const handleNotesChange = useCallback((itemId: number, notes: string) => {
-    if (!instance || !instanceId) return
-    clearTimeout(notesTimerRef.current)
-    notesTimerRef.current = setTimeout(() => {
-      updateResponse.mutate({
-        instanceId,
-        itemId,
-        data: { notes },
-      })
-    }, 500)
-  }, [instance, instanceId, updateResponse])
-
   const handlePlaceholderChange = useCallback((itemInstance: ChecklistItemInstance, value: string) => {
     if (!instanceId) return
     setPlaceholderInputs(prev => ({ ...prev, [itemInstance.id]: value }))
@@ -241,7 +227,7 @@ export function ChecklistInstancePage() {
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[instance.status] ?? statusColors.draft}`}>
-                  {instance.status_display}
+                  {instance.status_display || instance.status}
                 </span>
               </div>
             </div>
@@ -416,6 +402,7 @@ export function ChecklistInstancePage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
                   className="flex items-center"
+                  onPointerDown={() => handleToggleItem(item.id)}
                 >
                   <ItemCheckbox
                     content={item.title}
@@ -426,7 +413,10 @@ export function ChecklistInstancePage() {
                     disabled={instance.status !== 'in_progress'}
                   />
                   <button
-                    onClick={() => setSelectedItem(item)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedItem(item)
+                    }}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mr-2"
                   >
                     <ChevronRight size={16} />

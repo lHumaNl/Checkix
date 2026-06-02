@@ -324,7 +324,10 @@ class TodoService:
 
         # Fetch updated items
         result = await db.execute(
-            select(TodoItem).where(TodoItem.id.in_(item_ids))
+            select(TodoItem).where(
+                TodoItem.todo_list_id == todo_list.id,
+                TodoItem.id.in_(item_ids),
+            )
         )
         return result.scalars().all()
 
@@ -351,7 +354,10 @@ class TodoService:
 
         # Fetch updated items
         result = await db.execute(
-            select(TodoItem).where(TodoItem.id.in_(item_ids))
+            select(TodoItem).where(
+                TodoItem.todo_list_id == todo_list.id,
+                TodoItem.id.in_(item_ids),
+            )
         )
         return result.scalars().all()
 

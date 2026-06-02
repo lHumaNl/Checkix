@@ -321,24 +321,11 @@ function QuickActionsFAB() {
       icon={<PlusOutlined />}
       tooltip="Quick actions"
       style={{ right: 24, bottom: 24 }}
-      items={[
-        {
-          icon: <CheckCircleOutlined />,
-          tooltip: 'New Checklist',
-          onClick: () => navigate('/checklists'),
-        },
-        {
-          icon: <UnorderedListOutlined />,
-          tooltip: 'New Todo',
-          onClick: () => navigate('/checklists'),
-        },
-        {
-          icon: <CalendarOutlined />,
-          tooltip: 'New Event',
-          onClick: () => navigate('/calendar'),
-        },
-      ]}
-    />
+    >
+      <FloatButton icon={<CheckCircleOutlined />} tooltip="New Checklist" onClick={() => navigate('/checklists')} />
+      <FloatButton icon={<UnorderedListOutlined />} tooltip="New Todo" onClick={() => navigate('/todos')} />
+      <FloatButton icon={<CalendarOutlined />} tooltip="New Event" onClick={() => navigate('/calendar')} />
+    </FloatButton.Group>
   )
 }
 

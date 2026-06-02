@@ -12,9 +12,24 @@ services:
     expose:
       - "8000"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
+        condition: service_healthy
+    networks:
+      - checkix_network
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: checkix_migrate
+    restart: "no"
+    env_file:
+      - .env
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    depends_on:
+      db:
         condition: service_healthy
     networks:
       - checkix_network

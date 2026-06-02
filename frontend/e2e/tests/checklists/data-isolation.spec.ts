@@ -5,8 +5,7 @@ test.describe('Data Isolation', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
   test.describe('Multi-user isolation', () => {
     // These tests require a second user to be seeded in the dev database.
-    // To set up: python scripts/manage.py shell
-    //   from django.contrib.auth import get_user_model
+    // To set up: create users through the FastAPI auth/user management flow.
     //   User = get_user_model()
     //   User.objects.create_user(username='testuser-b', password='password456')
 

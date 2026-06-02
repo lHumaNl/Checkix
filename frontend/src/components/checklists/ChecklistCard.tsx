@@ -74,7 +74,7 @@ export function ChecklistCard({
               className="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate"
               onClick={(e) => e.stopPropagation()}
             >
-              {checklist.title}
+              {checklist.title || checklist.name}
             </Link>
           </div>
           <DropdownMenu.Root>

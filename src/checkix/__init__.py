@@ -1,3 +1,3 @@
-"""Checkix - Django web application package."""
+"""Checkix FastAPI application package."""
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

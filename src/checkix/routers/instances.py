@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from checkix.database import get_db
 from checkix.dependencies import PaginationParams, get_current_user, paginate
 from checkix.exceptions import BadRequestException, NotFoundException
-from checkix.models.checklist import ChecklistItem, ChecklistVersion
+from checkix.models.checklist import ChecklistItem, ChecklistTemplate, ChecklistVersion
 from checkix.models.checklist_instance import (
     ChecklistInstance,
     ChecklistItemInstance,
@@ -37,7 +37,8 @@ router = APIRouter(tags=["instances"])
 # Allowed status transitions mapped from current status -> set of valid next statuses.
 _VALID_TRANSITIONS: dict[str, set[str]] = {
     "draft": {"in_progress", "cancelled"},
-    "in_progress": {"completed", "cancelled"},
+    "in_progress": {"paused", "completed", "cancelled"},
+    "paused": {"in_progress", "cancelled"},
     "completed": set(),   # terminal
     "cancelled": set(),   # terminal
 }
@@ -64,6 +65,25 @@ async def _get_owned_instance(
     if instance is None:
         raise NotFoundException(detail="Instance not found")
     return instance
+
+
+async def _get_owned_template(
+    db: AsyncSession,
+    template_id: int,
+    user: User,
+) -> ChecklistTemplate:
+    """Fetch a non-deleted template owned by *user*, raising 404 if missing."""
+    result = await db.execute(
+        select(ChecklistTemplate).where(
+            ChecklistTemplate.id == template_id,
+            ChecklistTemplate.user_id == user.id,
+            ChecklistTemplate.is_deleted.is_(False),
+        )
+    )
+    template = result.scalar_one_or_none()
+    if template is None:
+        raise NotFoundException(detail="Template not found")
+    return template
 
 
 async def _recalculate_progress(db: AsyncSession, instance_id: int) -> int:
@@ -142,22 +162,20 @@ async def create_instance(
     # Resolve the version to copy items from.
     if body.version_id is not None:
         version_result = await db.execute(
-            select(ChecklistVersion).where(ChecklistVersion.id == body.version_id)
+            select(ChecklistVersion)
+            .join(ChecklistTemplate, ChecklistTemplate.id == ChecklistVersion.template_id)
+            .where(
+                ChecklistVersion.id == body.version_id,
+                ChecklistVersion.template_id == body.template_id,
+                ChecklistTemplate.user_id == current_user.id,
+                ChecklistTemplate.is_deleted.is_(False),
+            )
         )
         version = version_result.scalar_one_or_none()
         if version is None:
             raise NotFoundException(detail="Version not found")
     else:
-        from checkix.models.checklist import ChecklistTemplate
-
-        template_result = await db.execute(
-            select(ChecklistTemplate).where(
-                ChecklistTemplate.id == body.template_id
-            )
-        )
-        template = template_result.scalar_one_or_none()
-        if template is None:
-            raise NotFoundException(detail="Template not found")
+        template = await _get_owned_template(db, body.template_id, current_user)
 
         if template.current_version_id is None:
             raise BadRequestException(
@@ -266,7 +284,7 @@ async def _transition_status(
     now = datetime.now(timezone.utc)
     instance.status = target_status
 
-    if target_status == "in_progress":
+    if target_status == "in_progress" and instance.started_at is None:
         instance.started_at = now
     elif target_status == "completed":
         instance.completed_at = now
@@ -306,6 +324,28 @@ async def complete_instance(
     """Change instance status to *completed* and set progress to 100%."""
     instance = await _get_owned_instance(db, instance_id, current_user)
     return await _transition_status(db, instance, "completed", current_user.id)
+
+
+@router.post("/{instance_id}/pause/", response_model=ChecklistInstanceOut)
+async def pause_instance(
+    instance_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ChecklistInstance:
+    """Change instance status to *paused*."""
+    instance = await _get_owned_instance(db, instance_id, current_user)
+    return await _transition_status(db, instance, "paused", current_user.id)
+
+
+@router.post("/{instance_id}/resume/", response_model=ChecklistInstanceOut)
+async def resume_instance(
+    instance_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> ChecklistInstance:
+    """Resume a paused instance by returning it to *in_progress*."""
+    instance = await _get_owned_instance(db, instance_id, current_user)
+    return await _transition_status(db, instance, "in_progress", current_user.id)
 
 
 @router.post("/{instance_id}/cancel/", response_model=ChecklistInstanceOut)

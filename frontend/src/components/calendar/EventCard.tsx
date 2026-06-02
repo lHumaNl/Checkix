@@ -68,9 +68,9 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
         {getEventIcon()}
         <div className="flex-1 min-w-0">
           <p className={`text-xs font-medium ${colors.text} truncate`}>{event.title}</p>
-          {!event.is_all_day && (
+          {!event.all_day && (
             <p className="text-[10px] text-gray-500 dark:text-gray-400">
-              {format(new Date(event.start_time), 'HH:mm')}
+              {format(new Date(event.start_datetime), 'HH:mm')}
             </p>
           )}
         </div>
@@ -96,16 +96,16 @@ export function EventCard({ event, onClick, onDelete, compact = false }: EventCa
             </p>
           )}
           <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-            {!event.is_all_day ? (
+            {!event.all_day ? (
               <>
                 <span className="flex items-center gap-1">
                   <Clock size={12} />
-                  {format(new Date(event.start_time), 'HH:mm')} - {format(new Date(event.end_time), 'HH:mm')}
+                  {format(new Date(event.start_datetime), 'HH:mm')} - {format(new Date(event.end_datetime ?? event.start_datetime), 'HH:mm')}
                 </span>
-                <span>{format(new Date(event.start_time), 'MMM d, yyyy')}</span>
+                <span>{format(new Date(event.start_datetime), 'MMM d, yyyy')}</span>
               </>
             ) : (
-              <span>{format(new Date(event.start_time), 'MMM d, yyyy')} (All day)</span>
+              <span>{format(new Date(event.start_datetime), 'MMM d, yyyy')} (All day)</span>
             )}
           </div>
         </div>

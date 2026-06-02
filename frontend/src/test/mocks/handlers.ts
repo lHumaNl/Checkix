@@ -1,6 +1,6 @@
 import { http, HttpResponse, delay } from 'msw'
 
-const API_BASE = '/api/v1'
+const API_BASE = '/api'
 
 export const handlers = [
   http.post(`${API_BASE}/auth/token/`, async () => {
@@ -35,16 +35,15 @@ export const handlers = [
 
   http.get(`${API_BASE}/checklists`, async ({ request }) => {
     const url = new URL(request.url)
-    const page = parseInt(url.searchParams.get('page') || '1')
-    const perPage = parseInt(url.searchParams.get('per_page') || '10')
-    
     return HttpResponse.json({
-      count: 2,
-      next: null,
-      previous: null,
+      total: 2,
+      page: Number(url.searchParams.get('page') || '1'),
+      page_size: Number(url.searchParams.get('per_page') || '10'),
+      total_pages: 1,
       items: [
         {
           id: 1,
+          name: 'Test Checklist 1',
           title: 'Test Checklist 1',
           description: 'Description 1',
           category: 'work',
@@ -58,6 +57,7 @@ export const handlers = [
         },
         {
           id: 2,
+          name: 'Test Checklist 2',
           title: 'Test Checklist 2',
           description: 'Description 2',
           category: 'personal',
@@ -77,6 +77,7 @@ export const handlers = [
     const id = Number(params.id)
     return HttpResponse.json({
       id,
+      name: `Test Checklist ${id}`,
       title: `Test Checklist ${id}`,
       description: `Description for checklist ${id}`,
       category: 'work',
@@ -94,6 +95,7 @@ export const handlers = [
     await delay(100)
     return HttpResponse.json({
       id: 3,
+      name: 'New Checklist',
       title: 'New Checklist',
       description: 'New description',
       category: 'work',
@@ -111,6 +113,7 @@ export const handlers = [
     const id = Number(params.id)
     return HttpResponse.json({
       id,
+      name: 'Updated Checklist',
       title: 'Updated Checklist',
       description: 'Updated description',
       category: 'work',
@@ -134,9 +137,10 @@ export const handlers = [
 
   http.get(`${API_BASE}/instances`, async () => {
     return HttpResponse.json({
-      count: 1,
-      next: null,
-      previous: null,
+      total: 1,
+      page: 1,
+      page_size: 10,
+      total_pages: 1,
       items: [
         {
           id: 1,

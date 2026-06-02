@@ -7,8 +7,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 
 class RunLink(TimestampMixin, Base):

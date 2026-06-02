@@ -5,7 +5,7 @@ import type { PaginatedResponse } from '@/types'
 
 // Bare axios instance for unauthenticated public requests
 const publicClient = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 

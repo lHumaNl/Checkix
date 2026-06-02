@@ -286,7 +286,7 @@ function RunLinkCard({ link, onDeleteRequest }: RunLinkCardProps) {
         <div className="min-w-0">
           <h3 className="font-semibold text-gray-900 dark:text-white truncate">{link.name}</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-            Template ID: {link.checklist_template}
+            Template ID: {link.template_id}
             {link.checklist_template_name ? ` — ${link.checklist_template_name}` : ''}
           </p>
         </div>

@@ -1,6 +1,6 @@
 """Checkix SQLAlchemy models."""
 
-from checkix.models.base import TimestampMixin, SoftDeleteMixin
+from checkix.models.base import Base, SoftDeleteMixin, TimestampMixin
 from checkix.models.user import User, UserProfile, Group, GroupMembership
 from checkix.models.tag import Tag
 from checkix.models.folder import Folder
@@ -25,6 +25,7 @@ from checkix.models.ldap import LDAPSyncLog
 
 __all__ = [
     # Mixins
+    "Base",
     "TimestampMixin",
     "SoftDeleteMixin",
     # User & auth

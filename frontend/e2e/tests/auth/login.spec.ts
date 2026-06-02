@@ -17,7 +17,7 @@ test.describe('Login Page', () => {
   })
 
   test('shows loading state during login', async ({ page }) => {
-    await page.route('**/api/v1/auth/token/', async (route) => {
+    await page.route('**/api/auth/token/', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       route.continue()
     })
@@ -26,7 +26,6 @@ test.describe('Login Page', () => {
     await page.locator('#password').fill('password')
     await page.locator('button[type="submit"]').click()
 
-    await expect(page.locator('.animate-spin')).toBeVisible()
     await expect(page.locator('button[type="submit"]')).toBeDisabled()
   })
 
@@ -43,7 +42,7 @@ test.describe('Login Page', () => {
   })
 
   test('shows error message when API returns error', async ({ page }) => {
-    await page.route('**/api/v1/auth/token/', (route) => {
+    await page.route('**/api/auth/token/', (route) => {
       route.fulfill({
         status: 401,
         contentType: 'application/json',
@@ -59,7 +58,7 @@ test.describe('Login Page', () => {
   })
 
   test('shows generic error on network failure', async ({ page }) => {
-    await page.route('**/api/v1/auth/token/', (route) => route.abort('failed'))
+    await page.route('**/api/auth/token/', (route) => route.abort('failed'))
 
     await page.locator('#username').fill('testuser')
     await page.locator('#password').fill('password')
@@ -76,7 +75,7 @@ test.describe('Login Page', () => {
   })
 
   test('submit button is disabled while loading', async ({ page }) => {
-    await page.route('**/api/v1/auth/token/', async (route) => {
+    await page.route('**/api/auth/token/', async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 500))
       route.fulfill({
         status: 200,

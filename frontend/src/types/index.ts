@@ -26,7 +26,7 @@ export interface ChecklistTemplate {
   versions_count?: number
   tag_details?: { id: number; name: string; color: string }[]
   // Optional fields present only in detail (retrieve) view
-  current_version?: Record<string, unknown>
+  current_version?: number | { items?: ChecklistItem[] } | null
   estimated_duration?: string | null
   // Legacy optional fields with graceful fallbacks in components
   usage_count?: number
@@ -37,8 +37,9 @@ export interface ChecklistTemplate {
 
 export interface ChecklistItem {
   id: number
-  template_id: number
+  template_id?: number
   content: string
+  title?: string
   description: string | null
   order: number
   is_required: boolean
@@ -54,6 +55,7 @@ export interface ChecklistItemInstance {
   is_completed: boolean
   completed_at: string | null
   placeholder_value: string
+  is_required?: boolean
   is_visible: boolean
   children: ChecklistItemInstance[]
 }
@@ -76,6 +78,13 @@ export interface ChecklistInstance {
   item_instances: ChecklistItemInstance[]
   created_at: string
   updated_at: string
+}
+
+export interface ChecklistResponse {
+  item_id: number
+  is_checked: boolean
+  checked_at: string | null
+  notes: string | null
 }
 
 export interface Folder {
@@ -138,8 +147,10 @@ export interface CalendarEvent {
 export interface CalendarEventCreate {
   title: string
   description?: string | null
-  start_datetime: string
-  end_datetime: string
+  start_datetime?: string
+  end_datetime?: string
+  start_time?: string
+  end_time?: string
   all_day?: boolean
   color?: string | null
   reminder_minutes_before?: number | null
@@ -152,6 +163,8 @@ export interface CalendarEventUpdate {
   description?: string | null
   start_datetime?: string
   end_datetime?: string
+  start_time?: string
+  end_time?: string
   all_day?: boolean
   color?: string | null
   reminder_minutes_before?: number | null
@@ -205,6 +218,7 @@ export interface ApiError {
 }
 
 export interface PaginatedResponse<T> {
+  count?: number
   total: number
   page: number
   page_size: number

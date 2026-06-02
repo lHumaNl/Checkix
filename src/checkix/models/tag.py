@@ -5,8 +5,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 
 class Tag(TimestampMixin, Base):

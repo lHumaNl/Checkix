@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = localStorage.getItem('refresh_token')
       if (refreshToken) {
         try {
-          const { data } = await axios.post('/api/v1/auth/token/refresh/', {
+          const { data } = await axios.post('/api/auth/token/refresh/', {
             refresh: refreshToken,
           })
           setAccessToken(data.access)

@@ -7,8 +7,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 
 class CommunityTemplate(TimestampMixin, Base):

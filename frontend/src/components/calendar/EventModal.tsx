@@ -93,13 +93,13 @@ export function EventModal({ isOpen, onClose, event, onSubmit, defaultDate }: Ev
       reset({
         title: event.title,
         description: event.description || '',
-        start_datetime: format(new Date(event.start_datetime || event.start_time), "yyyy-MM-dd'T'HH:mm"),
-        end_datetime: format(new Date(event.end_datetime || event.end_time), "yyyy-MM-dd'T'HH:mm"),
-        all_day: event.all_day ?? event.is_all_day ?? false,
+        start_datetime: format(new Date(event.start_datetime), "yyyy-MM-dd'T'HH:mm"),
+        end_datetime: format(new Date(event.end_datetime ?? event.start_datetime), "yyyy-MM-dd'T'HH:mm"),
+        all_day: event.all_day ?? false,
         color: event.color || '#3B82F6',
-        reminder_minutes_before: event.reminder_minutes_before ?? event.reminder_minutes ?? null,
+        reminder_minutes_before: event.reminder_minutes_before ?? null,
         event_type: event.event_type || 'custom',
-        checklist_template: event.checklist_template ?? event.template_id ?? null,
+        checklist_template: event.checklist_template ?? null,
       })
     } else if (defaultDate) {
       reset({

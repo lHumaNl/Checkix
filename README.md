@@ -1,276 +1,129 @@
-# Checkix (cx)
+# Checkix
 
-Enterprise-grade web application for managing reusable checklists and one-time todo lists with calendar integration, statistical tracking, team collaboration, and advanced automation features.
+Checkix is a FastAPI and React application for reusable checklists, one-time todo lists, scheduling,
+notifications, webhooks, auditing, and reporting.
 
-## Features
+## Stack
 
-- **Checklist Templates** - Reusable procedural templates with version control and conditional logic
-- **Checklist Instances** - Concrete executions with progress tracking and timestamps
-- **Todo Lists** - One-time task lists convertible to templates
-- **Calendar Integration** - Schedule instances with drag-and-drop rescheduling
-- **Statistics & Analytics** - Completion metrics, heatmaps, and trend visualizations
-- **Auto-Assignments** - LDAP/GPO integration for automated task distribution
-- **Notifications** - Multi-level notification sequences via email/webhooks
-- **Webhooks** - Real-time integrations with external systems
-- **Audit Trail** - Complete compliance tracking
-- **Community Sharing** - Template library with sharing capabilities
-- **Run Links** - One-click instant checklist creation
-- **Real-time Updates** - WebSocket-based live collaboration via Django Channels
-- **Progressive Web App** - React 19 + TypeScript SPA with offline support
+- FastAPI, Uvicorn, Pydantic settings
+- SQLAlchemy 2.x async ORM with Alembic migrations
+- PostgreSQL and Redis
+- React 19, TypeScript, Vite
+- Pytest and Ruff for backend quality checks
 
-## Quick Start
+## Quick start
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourorg/checkix.git
-cd checkix
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or: venv\Scripts\activate  # Windows
-
-# Install dependencies
+python3 -m venv venv
+source venv/bin/activate
 make install
-
-# Set up environment
 cp .env.example .env
-# Edit .env with your settings
-
-# Run migrations
 make migrate
-
-# Start development server
 make run
 ```
 
-## Installation
+The backend runs on `http://localhost:8000` by default.
 
-### Prerequisites
+## Configuration
 
-- Python 3.11+
-- PostgreSQL 16+ (production) or SQLite (development)
-- Redis (for Celery tasks and Django Channels)
-- Node.js 18+ (for frontend)
+Python dependencies are defined in `pyproject.toml`; legacy requirements files are not used. Configure the
+backend with environment variables from `.env.example`:
 
-### Development Setup
+- `DATABASE_URL` for the async application engine.
+- `DATABASE_URL_SYNC` for Alembic.
+- `REDIS_URL` for Redis-backed features.
+- `SECRET_KEY`, `ALGORITHM`, and token expiration settings for JWT authentication.
+- `CORS_ORIGINS` as a JSON array of allowed origins.
 
-1. **Clone and setup virtual environment:**
-   ```bash
-   git clone https://github.com/yourorg/checkix.git
-   cd checkix
-   python -m venv venv
-   source venv/bin/activate
-   ```
+## Database migrations
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements/development.txt
-   ```
-
-3. **Configure environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your local settings
-   ```
-
-4. **Initialize database:**
-   ```bash
-   python scripts/manage.py migrate
-   python scripts/manage.py createsuperuser
-   ```
-
-5. **Run development server:**
-   ```bash
-   python scripts/manage.py runserver
-   ```
-
-6. **Install frontend dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-7. **Run frontend development server:**
-   ```bash
-   npm run dev
-   ```
-
-### Production Setup
-
-1. Install production dependencies:
-   ```bash
-   pip install -r requirements/production.txt
-   ```
-
-2. Set environment variables:
-   ```bash
-   export DJANGO_ENV=production
-   export DJANGO_SECRET_KEY=your-secure-key
-   export DATABASE_URL=postgres://user:pass@host:5432/checkix
-   ```
-
-3. Collect static files:
-   ```bash
-   python scripts/manage.py collectstatic --noinput
-   ```
-
-4. Start ASGI server (for WebSocket support):
-   ```bash
-   daphne -b 0.0.0.0 -p 8000 config.asgi:application
-   ```
-
-## API Documentation
-
-API documentation is available at:
-- **Swagger UI:** `/api/docs/`
-- **ReDoc:** `/api/redoc/`
-- **OpenAPI Schema:** `/api/schema/`
-
-See [docs/api/README.md](docs/api/README.md) for detailed API documentation.
-
-## Testing
-
-### Backend Tests (pytest)
+Run migrations with Alembic:
 
 ```bash
-# Run all backend tests
-make test
-
-# Run with coverage
-pytest --cov=apps --cov-report=html
-
-# Run specific test file
-pytest apps/checklists/tests/test_models.py
-
-# Run with verbose output
-pytest -v
+make migrate
 ```
 
-### E2E Tests (Playwright)
+Create a migration after model changes:
+
+```bash
+make migrations MSG="describe change"
+```
+
+`alembic/versions/0001_baseline_schema.py` is a FastAPI/SQLAlchemy baseline migration. Existing databases that
+already contain the legacy tables should be reviewed and stamped to the baseline only after schema compatibility is
+verified.
+
+## API documentation
+
+FastAPI exposes interactive documentation at:
+
+- Swagger UI: `/docs`
+- ReDoc: `/redoc`
+- OpenAPI schema: `/openapi.json`
+
+Application API routes are mounted under `/api`. The Docker nginx config still rewrites `/api/v1` to `/api` for
+frontend/backward compatibility.
+
+See [docs/api/README.md](docs/api/README.md) for endpoint notes.
+
+## Testing and quality
+
+```bash
+make test
+make lint
+make format-check
+```
+
+Use `make test-cov` for a coverage report.
+
+## Frontend
 
 ```bash
 cd frontend
-
-# Install Playwright browsers (first time)
-npx playwright install chromium
-
-# Run all E2E tests
-npx playwright test --project=chromium
-
-# Run specific test file
-npx playwright test e2e/tests/checklists/crud.spec.ts
-
-# Run with UI mode
-npx playwright test --ui
-
-# Generate HTML report
-npx playwright show-report
+npm install
+npm run dev
 ```
 
-**Note:** Both backend (`localhost:8000`) and frontend (`localhost:5173`) servers must be running for E2E tests.
-
-**Test coverage:** 100 test cases across 13 files covering all 15 pages (auth, checklists, instances, dashboard, navigation, profile, todos, stats, community, assignments, run-links, webhooks, notifications).
+Both backend (`localhost:8000`) and frontend (`localhost:5173`) servers must be running for browser E2E tests.
 
 ## Deployment
 
-### Docker Deployment
+### Docker
 
 ```bash
-# Build and start containers
 make docker-up
-
-# Stop containers
+make docker-logs
 make docker-down
-
-# View logs
-docker-compose logs -f
 ```
 
-### Manual Deployment
+### Manual
 
-1. Set `DJANGO_ENV=production`
-2. Configure PostgreSQL database
-3. Set up Redis for Celery
-4. Run migrations: `python scripts/manage.py migrate`
-5. Collect static: `python scripts/manage.py collectstatic`
-6. Configure reverse proxy (nginx/Apache)
-7. Start Daphne: `daphne -b 0.0.0.0 -p 8000 config.asgi:application`
-8. Start Celery worker: `celery -A config worker -l info`
+1. Install production dependencies with `pip install .`.
+2. Configure PostgreSQL, Redis, and required environment variables.
+3. Run `alembic upgrade head`.
+4. Start Uvicorn or Gunicorn with the Uvicorn worker against `checkix.main:app`.
+5. Serve the React build and proxy `/api`, `/docs`, `/openapi.json`, and `/ws` to the backend.
 
-## Project Structure
+## Project structure
 
-```
+```text
 Checkix/
-├── config/                 # Django project settings
-│   ├── settings/          # Environment-specific settings
-│   ├── urls.py            # URL configuration
-│   ├── wsgi.py            # WSGI application
-│   ├── asgi.py            # ASGI application (Daphne)
-│   ├── routing.py         # WebSocket URL routing
-│   ├── middleware.py       # WebSocket JWT auth middleware
-│   └── exception_handler.py # Custom DRF exception handler
-├── apps/                   # Django applications
-│   ├── core/              # Base models and utilities
-│   ├── users/             # User management
-│   ├── checklists/        # Checklist templates
-│   ├── checklist_instances/
-│   ├── folders/           # Folder organization
-│   ├── calendar/          # Scheduling
-│   ├── notifications/     # Notification system
-│   ├── webhooks/          # Webhook integrations
-│   ├── audit/             # Audit logging
-│   ├── stats/             # Statistics
-│   ├── community/         # Community features
-│   ├── todo/              # Todo lists
-│   ├── assignments/       # Auto-assignments
-│   ├── run_links/         # One-click run links
-│   ├── ldap/              # LDAP/GPO integration
-│   └── tags/              # Tag management
+├── alembic/                # Alembic migration environment and versions
+├── docs/                   # Project documentation
 ├── frontend/               # React SPA
-│   ├── src/
-│   │   ├── api/            # API hooks (TanStack Query)
-│   │   ├── components/     # UI components (Radix UI)
-│   │   ├── contexts/       # React contexts (Auth)
-│   │   ├── hooks/          # Custom hooks (WebSocket)
-│   │   ├── pages/          # Route pages
-│   │   ├── types/          # TypeScript types
-│   │   └── lib/            # Utilities
-│   └── public/             # Static assets
-├── docs/                   # Documentation
-├── scripts/                # Utility scripts
-├── static/                 # Static files
-├── media/                  # User uploads
-├── templates/              # HTML templates
-├── locale/                 # Translation files
-└── requirements/           # Python dependencies
+├── nginx/                  # Reverse proxy configuration
+├── scripts/                # Non-framework utility scripts
+├── src/checkix/            # FastAPI application package
+│   ├── models/             # SQLAlchemy models
+│   ├── routers/            # FastAPI routers
+│   ├── schemas/            # Pydantic schemas
+│   ├── services/           # Business logic
+│   └── websocket/          # WebSocket endpoints
+└── tests/                  # Backend tests
 ```
 
-## Contributing
+## Migration notes
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes and add tests
-4. Run the test suite: `make test`
-5. Run linting: `make lint`
-6. Commit your changes: `git commit -m 'Add amazing feature'`
-7. Push to the branch: `git push origin feature/amazing-feature`
-8. Open a Pull Request
-
-### Code Style
-
-- Follow PEP 8 guidelines
-- Use Black for formatting: `make format`
-- Use isort for import sorting
-- Add type hints where possible
-- Write docstrings for public APIs
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Documentation:** [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/yourorg/checkix/issues)
-- **Email:** support@checkix.local
+- Some SQLAlchemy models intentionally keep legacy table names such as `auth_user` to preserve database compatibility.
+- Password hash compatibility is not fully migrated: current authentication verifies bcrypt hashes, while legacy
+  password hashes may require a compatibility verifier before existing users can log in.

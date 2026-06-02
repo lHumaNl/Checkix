@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
@@ -109,6 +109,7 @@ async def list_templates(
     pagination: Annotated[PaginationParams, Depends()],
     status: Annotated[Optional[str], Query()] = None,
     folder_id: Annotated[Optional[int], Query()] = None,
+    search: Annotated[Optional[str], Query()] = None,
 ) -> dict:
     """Return a paginated list of checklist templates for the current user.
 
@@ -126,6 +127,14 @@ async def list_templates(
         query = query.where(ChecklistTemplate.status == status)
     if folder_id is not None:
         query = query.where(ChecklistTemplate.folder_id == folder_id)
+    if search:
+        pattern = f"%{search.strip()}%"
+        query = query.where(
+            or_(
+                ChecklistTemplate.name.ilike(pattern),
+                ChecklistTemplate.description.ilike(pattern),
+            )
+        )
 
     return await paginate(db, query, pagination)
 
@@ -161,6 +170,21 @@ async def create_template(
     await db.flush()
 
     template.current_version_id = version.id
+
+    if body.items:
+        for index, item in enumerate(body.items):
+            db.add(
+                ChecklistItem(
+                    version_id=version.id,
+                    title=item.resolved_title,
+                    description=item.description,
+                    order=item.order if item.order is not None else index,
+                    is_required=item.is_required,
+                    priority=item.priority,
+                    is_halt=item.is_halt,
+                    halt_message=item.halt_message,
+                )
+            )
 
     if body.tags:
         await _set_tags(db, template, body.tags, current_user.id)

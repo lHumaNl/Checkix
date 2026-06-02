@@ -43,7 +43,7 @@ describe('useChecklists', () => {
 
   it('handles error state', async () => {
     server.use(
-      http.get('/api/v1/checklists', () => {
+      http.get('/api/checklists', () => {
         return new HttpResponse(null, { status: 500 })
       })
     )
@@ -86,7 +86,7 @@ describe('useCreateChecklist', () => {
     
     await act(async () => {
       result.current.mutate({
-        title: 'New Checklist',
+        name: 'New Checklist',
         description: 'Test description',
       })
     })
@@ -108,7 +108,7 @@ describe('useUpdateChecklist', () => {
       result.current.mutate({
         id: 1,
         data: {
-          title: 'Updated Checklist',
+          name: 'Updated Checklist',
           description: 'Updated description',
         },
       })
@@ -138,7 +138,7 @@ describe('useDeleteChecklist', () => {
 
   it('handles delete error', async () => {
     server.use(
-      http.delete('/api/v1/checklists/:id', () => {
+      http.delete('/api/checklists/:id', () => {
         return new HttpResponse(null, { status: 500 })
       })
     )

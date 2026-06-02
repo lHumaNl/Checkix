@@ -563,8 +563,8 @@ export function AssignmentsPage() {
       {/* Result count pill */}
       {!isLoading && data && (
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          {data.count ?? assignments.length}{' '}
-          {(data.count ?? assignments.length) === 1 ? 'assignment' : 'assignments'} found
+          {data.total ?? data.count ?? assignments.length}{' '}
+          {(data.total ?? data.count ?? assignments.length) === 1 ? 'assignment' : 'assignments'} found
         </p>
       )}
 

@@ -82,7 +82,7 @@ export function ChecklistList({
                   to={`/checklists/${checklist.id}`}
                   className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate"
                 >
-                  {checklist.title}
+                  {checklist.title || checklist.name}
                 </Link>
                 {checklist.tags?.length > 0 && (
                   <div className="flex-shrink-0">

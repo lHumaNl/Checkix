@@ -319,6 +319,9 @@ async def bulk_complete_items(
 
     # Re-fetch to get full ORM objects with relationships
     items_result = await db.execute(
-        select(TodoItem).where(TodoItem.id.in_(item_ids))
+        select(TodoItem).where(
+            TodoItem.id.in_(item_ids),
+            TodoItem.todo_list_id == list_id,
+        )
     )
     return list(items_result.scalars().all())

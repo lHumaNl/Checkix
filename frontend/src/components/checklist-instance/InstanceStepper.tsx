@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { ChecklistInstance, ChecklistResponse } from '@/types'
+import type { ChecklistInstance, ChecklistItemInstance } from '@/types'
 
 interface InstanceStepperProps {
   instance: ChecklistInstance
@@ -17,16 +17,11 @@ export function InstanceStepper({
   onResponseUpdate,
   canProceed,
 }: InstanceStepperProps) {
-  const items = instance.template.items ?? []
-  const responses = instance.responses
+  const items = instance.item_instances ?? []
   const totalSteps = items.length
 
-  const getResponse = (itemId: number): ChecklistResponse | undefined => {
-    return responses.find(r => r.item_id === itemId)
-  }
-
   const currentItem = items[currentStep]
-  const currentResponse = getResponse(currentItem?.id)
+  const currentResponse: ChecklistItemInstance | undefined = currentItem
 
   const handleNext = () => {
     if (canProceed && currentStep < totalSteps - 1) {
@@ -66,8 +61,7 @@ export function InstanceStepper({
 
       <div className="flex gap-1 overflow-x-auto pb-2">
         {items.map((item, index) => {
-          const response = getResponse(item.id)
-          const isCompleted = response?.is_checked
+          const isCompleted = item.is_completed
           const isCurrent = index === currentStep
 
           return (
@@ -95,23 +89,23 @@ export function InstanceStepper({
       >
         <div className="flex items-start gap-4">
           <button
-            onClick={() => onResponseUpdate(currentItem.id, !currentResponse?.is_checked)}
+            onClick={() => onResponseUpdate(currentItem.id, !currentResponse?.is_completed)}
             className={`flex-shrink-0 w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${
-              currentResponse?.is_checked
+              currentResponse?.is_completed
                 ? 'bg-green-500 border-green-500 text-white'
                 : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
             }`}
           >
-            {currentResponse?.is_checked && <Check size={18} />}
+            {currentResponse?.is_completed && <Check size={18} />}
           </button>
 
           <div className="flex-1 min-w-0">
             <h3 className={`text-lg font-medium ${
-              currentResponse?.is_checked
+              currentResponse?.is_completed
                 ? 'text-gray-400 dark:text-gray-500 line-through'
                 : 'text-gray-900 dark:text-white'
             }`}>
-              {currentItem.content}
+              {currentItem.title}
             </h3>
 
             {currentItem.description && (
@@ -126,9 +120,9 @@ export function InstanceStepper({
               </span>
             )}
 
-            {currentResponse?.checked_at && (
+            {currentResponse?.completed_at && (
               <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                Completed at {new Date(currentResponse.checked_at).toLocaleTimeString()}
+                Completed at {new Date(currentResponse.completed_at).toLocaleTimeString()}
               </p>
             )}
           </div>

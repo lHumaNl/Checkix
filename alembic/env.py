@@ -21,8 +21,8 @@ if _SRC_DIR not in sys.path:
 
 # Import application components after path is set.
 from checkix.config import settings  # noqa: E402
-from checkix.database import Base  # noqa: E402
-from checkix.models import *  # noqa: F401,F403 – register all models with Base
+from checkix.models.base import Base  # noqa: E402
+from checkix.models import *  # noqa: E402,F401,F403 – register all models with Base
 
 # ---------------------------------------------------------------------------
 # Alembic Config object — provides access to values in alembic.ini.
@@ -35,7 +35,7 @@ if config.config_file_name is not None:
 
 # Use the *synchronous* database URL so Alembic can connect without
 # async drivers (asyncpg is not supported by Alembic's default runner).
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL_SYNC)
+config.set_main_option("sqlalchemy.url", settings.database_url_sync)
 
 # Meta-data target for autogenerate support.
 target_metadata = Base.metadata

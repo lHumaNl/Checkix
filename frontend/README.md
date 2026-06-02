@@ -103,7 +103,7 @@ toast({ title: 'Error occurred', variant: 'destructive' })
 Configure via `.env` or `.env.local`:
 
 ```env
-VITE_API_URL=/api/v1        # API base URL (proxied in dev)
+VITE_API_URL=/api           # API base URL (proxied in dev)
 VITE_WS_URL=ws://localhost:8000  # WebSocket base URL
 ```
 

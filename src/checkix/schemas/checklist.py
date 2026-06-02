@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from checkix.schemas.common import ORMSchema
 from checkix.schemas.tag import TagOut
@@ -32,6 +32,29 @@ class ChecklistTemplateOut(ChecklistTemplateListOut):
     current_version: Optional[int] = Field(default=None, validation_alias="current_version_id")
 
 
+class ChecklistTemplateItemCreate(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    title: Optional[str] = None
+    content: Optional[str] = None
+    description: Optional[str] = None
+    order: int = 0
+    is_required: bool = True
+    priority: Optional[str] = None
+    is_halt: bool = False
+    halt_message: Optional[str] = None
+
+    @model_validator(mode="after")
+    def require_title_or_content(self) -> ChecklistTemplateItemCreate:
+        if not (self.title or self.content):
+            raise ValueError("Either title or content is required")
+        return self
+
+    @property
+    def resolved_title(self) -> str:
+        return self.title or self.content or "Untitled item"
+
+
 class ChecklistTemplateCreate(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,6 +66,7 @@ class ChecklistTemplateCreate(BaseModel):
     sequential_mode: bool = False
     icon: Optional[str] = None
     category: Optional[str] = None
+    items: Optional[list[ChecklistTemplateItemCreate]] = None
 
 
 class ChecklistTemplateUpdate(BaseModel):

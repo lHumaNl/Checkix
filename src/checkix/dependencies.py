@@ -17,6 +17,8 @@ from checkix.exceptions import ForbiddenException, UnauthorizedException
 from checkix.models.user import User
 
 _bearer_scheme = HTTPBearer(auto_error=False)
+ACCESS_TOKEN_TYPE = "access"
+TOKEN_TYPE_CLAIM = "type"
 
 
 async def get_current_user(
@@ -43,6 +45,9 @@ async def get_current_user(
         raise UnauthorizedException(detail="Token has expired") from exc
     except jwt.InvalidTokenError as exc:
         raise UnauthorizedException(detail="Invalid token") from exc
+
+    if payload.get(TOKEN_TYPE_CLAIM) != ACCESS_TOKEN_TYPE:
+        raise UnauthorizedException(detail="Access token required")
 
     raw_sub = payload.get("sub")
     if raw_sub is None:

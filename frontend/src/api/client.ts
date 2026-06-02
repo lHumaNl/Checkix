@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios'
 import type { InternalAxiosRequestConfig } from 'axios'
 
-const baseURL = '/api/v1'
+const baseURL = '/api'
 
 // SECURITY: Access token is stored in memory (not localStorage) to reduce XSS risk.
 // Only the refresh token is persisted in localStorage for session continuity.
@@ -28,7 +28,7 @@ client.interceptors.request.use(
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    // Ensure trailing slash on URL path (Django APPEND_SLASH=True)
+    // Keep trailing slashes because backend routes are declared with them.
     if (config.url && !config.url.endsWith('/') && !config.url.includes('?')) {
       config.url += '/'
     } else if (config.url && config.url.includes('?') && !config.url.split('?')[0].endsWith('/')) {

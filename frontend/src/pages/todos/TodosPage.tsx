@@ -267,7 +267,7 @@ function TodoItemRow({ item, listId }: TodoItemRowProps) {
     )
   }
 
-  const isDone = item.status === 'done' || item.is_completed
+  const isDone = item.status === 'completed' || item.is_completed
 
   return (
     <>
@@ -416,7 +416,7 @@ function TodoListCard({ list }: TodoListCardProps) {
   const items = Array.isArray(list.items) ? list.items : []
   const progress = list.progress_percentage ?? 0
   const itemsCount = list.items_count ?? items.length
-  const completedCount = list.completed_items_count ?? items.filter((i) => i.is_completed || i.status === 'done').length
+  const completedCount = list.completed_items_count ?? items.filter((i) => i.is_completed || i.status === 'completed').length
 
   return (
     <>

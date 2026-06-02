@@ -10,12 +10,12 @@ interface UpcomingEventsProps {
 export function UpcomingEvents({ events, onEventClick }: UpcomingEventsProps) {
   const safeEvents = Array.isArray(events) ? events : []
   const upcomingEvents = safeEvents
-    .filter((event) => new Date(event.start_time) >= new Date())
-    .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    .filter((event) => new Date(event.start_datetime) >= new Date())
+    .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
     .slice(0, 5)
 
   const groupedEvents = upcomingEvents.reduce((groups, event) => {
-    const date = new Date(event.start_time)
+    const date = new Date(event.start_datetime)
     let key: string
 
     if (isToday(date)) {

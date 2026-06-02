@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
-import { server } from '@/test/mocks/server'
 
 vi.mock('@/contexts/AuthContext', async () => {
   const actual = await vi.importActual('@/contexts/AuthContext')
@@ -30,7 +28,7 @@ const createWrapper = (initialRoute: string = '/protected') => {
     },
   })
   
-  return ({ children }: { children: React.ReactNode }) => (
+  return () => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialRoute]}>
         <Routes>
@@ -67,7 +65,7 @@ describe('ProtectedRoute', () => {
     
     const Wrapper = createWrapper()
     
-    render(<Wrapper children={null} />)
+    render(<Wrapper />)
     
     await waitFor(() => {
       expect(screen.getByTestId('location').textContent).toBe('/login')
@@ -86,7 +84,7 @@ describe('ProtectedRoute', () => {
     
     const Wrapper = createWrapper()
     
-    render(<Wrapper children={null} />)
+    render(<Wrapper />)
     
     await waitFor(() => {
       expect(screen.getByText('Protected Content')).toBeDefined()
@@ -105,7 +103,7 @@ describe('ProtectedRoute', () => {
     
     const Wrapper = createWrapper()
     
-    render(<Wrapper children={null} />)
+    render(<Wrapper />)
     
     expect(screen.getByText('Loading...')).toBeDefined()
   })

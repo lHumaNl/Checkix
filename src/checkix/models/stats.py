@@ -7,8 +7,7 @@ from datetime import date as date_type
 from sqlalchemy import BigInteger, Date, Float, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 
 class ChecklistUsageStats(TimestampMixin, Base):

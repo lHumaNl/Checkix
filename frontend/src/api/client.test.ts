@@ -33,7 +33,7 @@ describe('API Client', () => {
       
       let capturedAuth: string | null = null
       server.use(
-        http.get('/api/v1/users/me/', ({ request }) => {
+        http.get('/api/users/me/', ({ request }) => {
           capturedAuth = request.headers.get('Authorization')
           return HttpResponse.json({ id: 1 })
         })
@@ -46,9 +46,9 @@ describe('API Client', () => {
     it('does not add Authorization header when no token', async () => {
       setAccessToken(null)
       
-      let capturedAuth: string | undefined = 'present'
+      let capturedAuth: string | null = 'present'
       server.use(
-        http.get('/api/v1/checklists/', ({ request }) => {
+        http.get('/api/checklists/', ({ request }) => {
           capturedAuth = request.headers.get('Authorization')
           return HttpResponse.json({ results: [] })
         })
@@ -60,7 +60,7 @@ describe('API Client', () => {
 
     it('adds trailing slash to URLs without query params', async () => {
       server.use(
-        http.get('/api/v1/users/me/', () => {
+        http.get('/api/users/me/', () => {
           return HttpResponse.json({ id: 1 })
         })
       )
@@ -71,7 +71,7 @@ describe('API Client', () => {
 
     it('handles URLs with query params correctly', async () => {
       server.use(
-        http.get('/api/v1/checklists/', () => {
+        http.get('/api/checklists/', () => {
           return HttpResponse.json({ results: [] })
         })
       )
@@ -86,7 +86,7 @@ describe('API Client', () => {
       let requestCount = 0
       
       server.use(
-        http.get('/api/v1/checklists/', ({ request }) => {
+        http.get('/api/checklists/', ({ request }) => {
           requestCount++
           const auth = request.headers.get('Authorization')
           
@@ -95,7 +95,7 @@ describe('API Client', () => {
           }
           return new HttpResponse(null, { status: 401 })
         }),
-        http.post('/api/v1/auth/token/refresh/', () => {
+        http.post('/api/auth/token/refresh/', () => {
           return HttpResponse.json({ access: 'valid-token' })
         })
       )

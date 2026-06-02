@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from checkix.database import Base
-from checkix.models.base import TimestampMixin
+from checkix.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from checkix.models.user import User  # noqa: F401

@@ -11,7 +11,11 @@ import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toast } from '@/hooks/useToast'
-import type { ChecklistTemplate } from '@/types'
+import type { ChecklistItem, ChecklistTemplate } from '@/types'
+
+interface ChecklistVersionDetail {
+  items?: ChecklistItem[]
+}
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -22,7 +26,7 @@ const schema = z.object({
   execution_mode: z.enum(['sequential', 'free_order']),
   status: z.enum(['draft', 'active', 'archived']),
   items: z.array(z.object({
-    content: z.string().min(1, 'Content is required'),
+    content: z.string(),
     description: z.string().nullable(),
     is_required: z.boolean(),
     estimated_time_seconds: z.number().nullable(),
@@ -46,7 +50,7 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
     resolver: zodResolver(schema),
     defaultValues: isEdit
       ? {
-          title: checklist.title,
+          title: checklist.title || checklist.name,
           description: checklist.description ?? '',
           category: checklist.category ?? '',
           tags: checklist.tags ?? [],
@@ -54,11 +58,11 @@ export function ChecklistFormModal({ onClose, checklist }: ChecklistFormModalPro
           execution_mode: checklist.execution_mode ?? 'free_order',
           status: checklist.status ?? 'draft',
           items: (() => {
-            const versionItems = (checklist as Record<string, unknown>).current_version as { items?: { title?: string; description?: string; is_required?: boolean }[] } | undefined
-            const items = versionItems?.items
+            const version = checklist.current_version as ChecklistVersionDetail | number | null | undefined
+            const items = typeof version === 'object' ? version?.items : undefined
             if (items?.length) {
               return items.map(item => ({
-                content: item.title || '',
+                content: item.title || item.content || '',
                 description: item.description || '',
                 is_required: item.is_required ?? false,
                 estimated_time_seconds: null,

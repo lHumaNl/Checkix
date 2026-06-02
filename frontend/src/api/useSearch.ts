@@ -13,7 +13,7 @@ export function useSearch(query: string) {
     queryKey: ['search', query],
     queryFn: async () => {
       if (!query.trim()) return { tags: [], folders: [], checklists: [], todos: [] } as SearchResults
-      const { data } = await client.get('/search/', {
+      const { data } = await client.get<{ items?: SearchResults }>('/search/', {
         params: { q: query },
       })
       return data.items ?? { tags: [], folders: [], checklists: [], todos: [] }

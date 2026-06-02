@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -16,7 +17,7 @@ const createWrapper = (initialRoute = '/login') => {
     },
   })
   
-  return ({ children }: { children: React.ReactNode }) => (
+  return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialRoute]}>
         <AuthProvider>{children}</AuthProvider>
@@ -122,7 +123,7 @@ describe('LoginPage', () => {
 
   it('shows error message on failed login', async () => {
     server.use(
-      http.post('/api/v1/auth/token/', () => {
+      http.post('/api/auth/token/', () => {
         return HttpResponse.json(
           { detail: 'Invalid credentials' },
           { status: 401 }
@@ -150,7 +151,7 @@ describe('LoginPage', () => {
 
   it('shows generic error on network failure', async () => {
     server.use(
-      http.post('/api/v1/auth/token/', () => {
+      http.post('/api/auth/token/', () => {
         return HttpResponse.json(
           { detail: 'Something went wrong' },
           { status: 500 }
