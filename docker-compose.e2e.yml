@@ -13,6 +13,10 @@ services:
       DATABASE_URL_SYNC: postgresql://checkix:checkix@db:5432/checkix_e2e
       REDIS_URL: redis://redis:6379/2
 
+      E2E_ADMIN_USERNAME: admin
+      E2E_ADMIN_PASSWORD: "1"
+    command: ["sh", "-c", "python -m alembic upgrade head && python -m checkix.e2e_seed_admin"]
+
   nginx:
     container_name: checkix_nginx_e2e_nginx
     ports:
@@ -22,6 +26,17 @@ services:
     container_name: checkix_nginx_e2e_db
     environment:
       POSTGRES_DB: checkix_e2e
+    healthcheck:
+      test: ["CMD-SHELL", "psql -U checkix -d checkix_e2e -c 'SELECT 1' >/dev/null 2>&1"]
 
+  # Keep E2E data isolated from the default development stack. PostgreSQL only
+  # creates POSTGRES_DB when the data directory is initialized, so reusing the
+  # default postgres_data volume can leave checkix_e2e missing.
   redis:
     container_name: checkix_nginx_e2e_redis
+
+volumes:
+  postgres_data:
+    name: checkix_e2e_postgres_data
+  redis_data:
+    name: checkix_e2e_redis_data
