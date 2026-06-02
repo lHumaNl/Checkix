@@ -1,9 +1,14 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Folder, Tag } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Button, Card, Empty, Input, Layout, List, Segmented, Space, Tag, Typography } from 'antd'
+import { Folder, Tag as TagIcon } from 'lucide-react'
 import { useTags } from '@/api/useTags'
 import { useFolders } from '@/api/useFolders'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
+
+const { Sider } = Layout
+const { Text, Title } = Typography
+const { CheckableTag } = Tag
 
 interface FilterSidebarProps {
   search: string
@@ -57,128 +62,107 @@ export function FilterSidebar({
   const hasFilters = search || statusFilter !== 'all' || selectedTags.length > 0 || selectedFolderId
 
   return (
-    <motion.aside
+    <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full sm:w-64 sm:flex-shrink-0 bg-white dark:bg-gray-900 border-b sm:border-b-0 sm:border-r border-gray-200 dark:border-gray-800 p-4 space-y-4 sm:space-y-6"
+      className="w-full sm:w-72 sm:flex-shrink-0"
     >
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-gray-900 dark:text-white">{t('common.filters')}</h3>
-        {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            {t('common.clearAll')}
-          </button>
-        )}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('common.search')}
-        </label>
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t('checklists.searchPlaceholder')}
-            className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {search && (
-            <button
-              onClick={() => onSearchChange('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('common.status')}
-        </label>
-        <div className="space-y-1">
-          {statuses.map(status => (
-            <button
-              key={status.value}
-              onClick={() => onStatusChange(status.value)}
-              className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                statusFilter === status.value
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {t(status.labelKey)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <Tag size={14} className="inline mr-1" />
-          {t('checklists.tags')}
-        </label>
-        <div className="flex flex-wrap gap-1">
-          <AnimatePresence>
-            {tags.map(tag => (
-              <motion.button
-                key={tag.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={() => toggleTag(tag.name)}
-                className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
-                  selectedTags.includes(tag.name)
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 ring-2 ring-blue-500'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {tag.name}
-              </motion.button>
-            ))}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          <Folder size={14} className="inline mr-1" />
-          {t('checklists.folders')}
-        </label>
-        <div className="space-y-1">
-          <button
-            onClick={() => onFolderChange(null)}
-            className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-              selectedFolderId === null
-                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
-          >
-            {t('checklists.allFolders')}
-          </button>
-          {folders.map(folder => (
-            <div key={folder.id}>
-              <button
-                onClick={() => onFolderChange(folder.id)}
-                className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center gap-2 ${
-                  selectedFolderId === folder.id
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                <Folder size={14} />
-                {folder.name}
-              </button>
+      <Sider
+        width="100%"
+        theme="light"
+        className="rounded-xl border border-gray-200 dark:border-gray-800"
+        style={{ background: 'transparent' }}
+      >
+        <Card className="h-full" styles={{ body: { padding: 16 } }}>
+          <Space direction="vertical" size={18} className="w-full">
+            <div className="flex items-center justify-between">
+              <Title level={5} style={{ margin: 0 }}>{t('common.filters')}</Title>
+              {hasFilters && (
+                <Button type="link" size="small" onClick={clearFilters}>
+                  {t('common.clearAll')}
+                </Button>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
-    </motion.aside>
+
+            <Space direction="vertical" size={8} className="w-full">
+              <Text strong>{t('common.search')}</Text>
+              <Input.Search
+                allowClear
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+                onSearch={onSearchChange}
+                placeholder={t('checklists.searchPlaceholder')}
+              />
+            </Space>
+
+            <Space direction="vertical" size={8} className="w-full">
+              <Text strong>{t('common.status')}</Text>
+              <Segmented
+                block
+                value={statusFilter}
+                onChange={(value) => onStatusChange(value as string)}
+                options={statuses.map(status => ({ value: status.value, label: t(status.labelKey) }))}
+              />
+            </Space>
+
+            <Space direction="vertical" size={8} className="w-full">
+              <Text strong className="inline-flex items-center gap-1">
+                <TagIcon size={14} />
+                {t('checklists.tags')}
+              </Text>
+              {tags.length === 0 ? (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('common.noResults')} />
+              ) : (
+                <div className="flex flex-wrap gap-1">
+                  <AnimatePresence>
+                    {tags.map(tag => (
+                      <motion.span
+                        key={tag.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                      >
+                        <CheckableTag
+                          checked={selectedTags.includes(tag.name)}
+                          onChange={() => toggleTag(tag.name)}
+                        >
+                          {tag.name}
+                        </CheckableTag>
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
+            </Space>
+
+            <Space direction="vertical" size={8} className="w-full">
+              <Text strong className="inline-flex items-center gap-1">
+                <Folder size={14} />
+                {t('checklists.folders')}
+              </Text>
+              <List
+                size="small"
+                dataSource={[{ id: null, name: t('checklists.allFolders') }, ...folders]}
+                renderItem={(folder) => {
+                  const isSelected = selectedFolderId === folder.id
+                  return (
+                    <List.Item className={isSelected ? 'rounded-lg bg-blue-50 dark:bg-blue-900/20' : 'rounded-lg'}>
+                      <Button
+                        type={isSelected ? 'link' : 'text'}
+                        className="w-full justify-start"
+                        icon={<Folder size={14} />}
+                        onClick={() => onFolderChange(folder.id)}
+                      >
+                        {folder.name}
+                      </Button>
+                    </List.Item>
+                  )
+                }}
+              />
+            </Space>
+          </Space>
+        </Card>
+      </Sider>
+    </motion.div>
   )
 }

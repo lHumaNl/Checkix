@@ -1,6 +1,6 @@
 export function CalendarSkeleton() {
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col lg:flex-row gap-4 animate-pulse">
+    <div className="flex flex-col lg:flex-row gap-4 animate-pulse" style={{ height: 'calc(100vh - 8rem)' }}>
       <div className="lg:w-64 shrink-0 space-y-4">
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
           <div className="h-5 w-32 rounded bg-gray-200 dark:bg-gray-700 mb-4" />

@@ -11,19 +11,27 @@ test.describe('Checklist CRUD Operations', () => {
    * Helper: fill the auto-added empty item in the create form
    */
   async function fillDefaultItem(page: import('@playwright/test').Page) {
-    const itemInput = page.locator('input[name="items.0.content"]')
+    const itemInput = page.getByRole('dialog').getByRole('textbox', { name: 'Item content' }).first()
     if (await itemInput.isVisible({ timeout: 1000 }).catch(() => false)) {
       await itemInput.fill('Default item')
     }
+  }
+
+  async function fillChecklistTitle(page: import('@playwright/test').Page, name: string) {
+    await page.getByRole('dialog').getByRole('textbox', { name: 'Checklist title' }).fill(name)
+  }
+
+  function itemInput(page: import('@playwright/test').Page, index: number) {
+    return page.getByRole('dialog').getByRole('textbox', { name: 'Item content' }).nth(index)
   }
 
   test('creates a new checklist', async ({ page }) => {
     const name = generateUniqueName('Test Checklist')
 
     await page.getByRole('button', { name: 'New Checklist' }).click()
-    await expect(page.getByRole('heading', { name: 'Create Checklist' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: /Create Checklist/ })).toBeVisible()
 
-    await page.locator('input[name="title"]').fill(name)
+    await fillChecklistTitle(page, name)
     await fillDefaultItem(page)
     await page.getByRole('button', { name: 'Create Checklist' }).click()
 
@@ -35,14 +43,14 @@ test.describe('Checklist CRUD Operations', () => {
     const name = generateUniqueName('With Items')
 
     await page.getByRole('button', { name: 'New Checklist' }).click()
-    await page.locator('input[name="title"]').fill(name)
+    await fillChecklistTitle(page, name)
 
     // Fill the first item (already exists)
-    await page.locator('input[name="items.0.content"]').fill('First item')
+    await itemInput(page, 0).fill('First item')
 
     // Add second item
     await page.getByRole('button', { name: 'Add Item' }).click()
-    await page.locator('input[name="items.1.content"]').fill('Second item')
+    await itemInput(page, 1).fill('Second item')
 
     await page.getByRole('button', { name: 'Create Checklist' }).click()
 
@@ -56,9 +64,9 @@ test.describe('Checklist CRUD Operations', () => {
 
     // Create with active status
     await page.getByRole('button', { name: 'New Checklist' }).click()
-    await page.locator('input[name="title"]').fill(name)
+    await fillChecklistTitle(page, name)
     await fillDefaultItem(page)
-    await page.locator('input[type="radio"][value="active"]').check()
+    await page.getByRole('dialog').getByText('Active', { exact: true }).click()
     await page.getByRole('button', { name: 'Create Checklist' }).click()
     await page.waitForTimeout(1000)
     await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 })
@@ -68,12 +76,11 @@ test.describe('Checklist CRUD Operations', () => {
     await expect(page).toHaveURL(/\/checklists\/\d+/)
 
     // Click edit button (2nd button in action bar, after Start)
-    const actionBar = page.getByRole('button', { name: 'Start' }).locator('..')
-    await actionBar.locator('button').nth(1).click()
+    await page.getByRole('button', { name: 'Edit' }).click()
 
     // Edit title in modal
-    await expect(page.getByRole('heading', { name: 'Edit Checklist' })).toBeVisible()
-    await page.locator('input[name="title"]').fill(updatedName)
+    await expect(page.getByRole('dialog', { name: /Edit Checklist/ })).toBeVisible()
+    await fillChecklistTitle(page, updatedName)
     await page.getByRole('button', { name: 'Save Changes' }).click()
 
     await page.waitForTimeout(1000)
@@ -85,7 +92,7 @@ test.describe('Checklist CRUD Operations', () => {
 
     // Create
     await page.getByRole('button', { name: 'New Checklist' }).click()
-    await page.locator('input[name="title"]').fill(name)
+    await fillChecklistTitle(page, name)
     await fillDefaultItem(page)
     await page.getByRole('button', { name: 'Create Checklist' }).click()
     await page.waitForTimeout(1000)
@@ -96,8 +103,7 @@ test.describe('Checklist CRUD Operations', () => {
     await expect(page).toHaveURL(/\/checklists\/\d+/)
 
     // Open MoreVertical dropdown (3rd button in action bar)
-    const actionBar = page.getByRole('button', { name: 'Start' }).locator('..')
-    await actionBar.locator('button').nth(2).click()
+    await page.getByRole('button', { name: 'Actions' }).last().click()
 
     // Click Delete in dropdown menu
     await page.getByRole('menuitem', { name: /delete/i }).click()
@@ -111,7 +117,7 @@ test.describe('Checklist CRUD Operations', () => {
 
   test('search input filters checklist list', async ({ page }) => {
     // Verify search input exists and typing triggers a filter
-    const searchInput = page.locator('input[placeholder="Search..."]')
+    const searchInput = page.getByRole('searchbox', { name: 'Search...' }).last()
     await expect(searchInput).toBeVisible()
 
     // Type a search query that won't match anything
@@ -131,7 +137,7 @@ test.describe('Checklist CRUD Operations', () => {
   })
 
   test('shows empty state when no results', async ({ page }) => {
-    await page.locator('input[placeholder="Search..."]').fill('zzz-nonexistent-checklist-zzz')
+    await page.getByRole('searchbox', { name: 'Search...' }).last().fill('zzz-nonexistent-checklist-zzz')
     await page.waitForTimeout(500)
     await expect(page.getByText(/no checklists found/i)).toBeVisible()
   })

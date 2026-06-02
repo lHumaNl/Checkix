@@ -63,7 +63,7 @@ export function useCreateNotificationRule() {
   return useMutation({
     mutationFn: async (payload: {
       event_type: string
-      checklist_template?: number | null
+      template_id?: number | null
       is_active?: boolean
     }) => {
       const { data } = await client.post<NotificationRule>('/notifications/rules/', payload)
@@ -83,19 +83,6 @@ export function useDeleteNotificationRule() {
       return id
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'rules'] })
-    },
-  })
-}
-
-export function useToggleNotificationRule() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: number) => {
-      const { data } = await client.post<NotificationRule>(`/notifications/rules/${id}/toggle_active/`)
-      return data
-    },
-    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications', 'rules'] })
     },
   })

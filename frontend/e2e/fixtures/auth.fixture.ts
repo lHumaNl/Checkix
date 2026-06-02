@@ -17,9 +17,9 @@ export class AuthPage {
   }
 
   async login(username: string, password: string) {
-    await this.page.locator('#username').fill(username)
-    await this.page.locator('#password').fill(password)
-    await this.page.locator('button[type="submit"]').click()
+    await this.page.getByLabel('Username').fill(username)
+    await this.page.getByLabel('Password').fill(password)
+    await this.page.getByRole('button', { name: 'Sign in' }).click()
   }
 
   async expectLoggedIn() {
@@ -27,7 +27,7 @@ export class AuthPage {
   }
 
   async expectError(message: string | RegExp) {
-    await expect(this.page.locator('.bg-red-50, .bg-red-900\\/50')).toContainText(message)
+    await expect(this.page.getByRole('alert')).toContainText(message)
   }
 }
 
@@ -41,23 +41,25 @@ export class ChecklistsPage {
 
   async createChecklist(title: string, options?: { items?: string[]; status?: string }) {
     await this.page.getByRole('button', { name: 'New Checklist' }).click()
-    await this.page.locator('input[name="title"]').fill(title)
+    const dialog = this.page.getByRole('dialog', { name: /Checklist/ })
+    await dialog.getByRole('textbox', { name: 'Checklist title' }).fill(title)
 
     if (options?.items) {
       for (let i = 0; i < options.items.length; i++) {
         // First item slot already exists at index 0
         if (i > 0) {
-          await this.page.getByRole('button', { name: 'Add Item' }).click()
+          await dialog.getByRole('button', { name: 'Add Item' }).click()
         }
-        await this.page.locator(`input[name="items.${i}.content"]`).fill(options.items[i])
+        await dialog.getByRole('textbox', { name: 'Item content' }).nth(i).fill(options.items[i])
       }
     }
 
     if (options?.status) {
-      await this.page.locator(`input[type="radio"][value="${options.status}"]`).check()
+      const statusLabel = options.status[0].toUpperCase() + options.status.slice(1)
+      await dialog.getByText(statusLabel, { exact: true }).click()
     }
 
-    await this.page.getByRole('button', { name: 'Create Checklist' }).click()
+    await dialog.getByRole('button', { name: 'Create Checklist' }).click()
     // Wait for modal to close
     await this.page.waitForTimeout(500)
   }

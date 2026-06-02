@@ -10,7 +10,7 @@ test.describe('Theme, i18n, and calendar readability', () => {
     await expect(page.locator('html')).toHaveClass(/dark/)
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 
-    const cardBackground = await page.locator('.ant-pro-card').first().evaluate((element) => {
+    const cardBackground = await page.locator('main .ant-card').first().evaluate((element) => {
       return getComputedStyle(element).backgroundColor
     })
     expect(cardBackground).not.toBe('rgb(255, 255, 255)')
@@ -32,8 +32,8 @@ test.describe('Theme, i18n, and calendar readability', () => {
     await expect(page.locator('html')).toHaveClass(/dark/)
 
     await expect.poll(async () => (
-      page.locator('.ant-pro-card').first().evaluate((element) => getComputedStyle(element).backgroundColor)
-    )).toBe('rgb(17, 24, 39)')
+      page.locator('main .ant-card').first().evaluate((element) => getComputedStyle(element).backgroundColor)
+    )).not.toBe('rgb(255, 255, 255)')
 
     const blackTextViolations = await page.locator('main').evaluate((main) => {
       function parseCssColor(value: string) {

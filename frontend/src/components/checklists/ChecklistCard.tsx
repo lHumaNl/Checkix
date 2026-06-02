@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { Button, Card, Checkbox, Dropdown, Space, Tag, Tooltip, Typography } from 'antd'
+import type { MenuProps } from 'antd'
 import { 
   CheckSquare, 
   MoreVertical, 
@@ -10,11 +12,12 @@ import {
   Edit,
   GripVertical
 } from 'lucide-react'
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
 import type { ChecklistTemplate } from '@/types'
 import { TagPills } from './TagPills'
+
+const { Text, Paragraph } = Typography
 
 interface ChecklistCardProps {
   checklist: ChecklistTemplate
@@ -27,9 +30,9 @@ interface ChecklistCardProps {
 }
 
 const statusColors = {
-  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-  active: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
-  archived: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+  draft: 'default',
+  active: 'success',
+  archived: 'orange',
 }
 
 const statusLabelKeys = {
@@ -50,34 +53,55 @@ export function ChecklistCard({
   const { t } = useI18n()
   const totalItems = checklist.items_count ?? 0
   const status = checklist.status || 'draft'
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'edit',
+      icon: <Edit size={14} />,
+      label: <Link to={`/checklists/${checklist.id}`}>{t('common.edit')}</Link>,
+    },
+    {
+      key: 'duplicate',
+      icon: <Copy size={14} />,
+      label: t('checklists.duplicate'),
+      onClick: () => onDuplicate?.(checklist.id),
+    },
+    { type: 'divider' },
+    {
+      key: 'delete',
+      danger: true,
+      icon: <Trash2 size={14} />,
+      label: t('common.delete'),
+      onClick: () => onDelete?.(checklist.id),
+    },
+  ]
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       whileHover={{ y: isDragging ? 0 : -4, boxShadow: isDragging ? undefined : '0 12px 24px -8px rgba(0, 0, 0, 0.15)' }}
-      className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-shadow h-full flex flex-col"
+      className="h-full"
     >
-      <div className="p-4">
+      <Card className="h-full overflow-hidden shadow-sm transition-shadow" styles={{ body: { padding: 16 } }}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             {dragHandleProps && (
-              <div 
-                {...dragHandleProps} 
-                className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <GripVertical size={16} />
-              </div>
+              <Tooltip title={t('common.move')}>
+                <div
+                  {...dragHandleProps}
+                  className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <GripVertical size={16} />
+                </div>
+              </Tooltip>
             )}
-            <input
-              type="checkbox"
+            <Checkbox
               checked={selected}
               onChange={(e) => {
                 e.stopPropagation()
                 onSelect?.(checklist.id, e.target.checked)
               }}
               onClick={(e) => e.stopPropagation()}
-              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <Link 
               to={`/checklists/${checklist.id}`}
@@ -87,84 +111,45 @@ export function ChecklistCard({
               {checklist.title || checklist.name}
             </Link>
           </div>
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild>
-              <button className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500">
-                <MoreVertical size={16} />
-              </button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-              <DropdownMenu.Content
-                className="min-w-[160px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 p-1 z-50"
-                sideOffset={5}
-              >
-                <DropdownMenu.Item asChild>
-                  <Link
-                    to={`/checklists/${checklist.id}`}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none"
-                  >
-                    <Edit size={14} />
-                    {t('common.edit')}
-                  </Link>
-                </DropdownMenu.Item>
-                <DropdownMenu.Item asChild>
-                  <button
-                    onClick={() => onDuplicate?.(checklist.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer outline-none w-full"
-                  >
-                    <Copy size={14} />
-                    {t('checklists.duplicate')}
-                  </button>
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                <DropdownMenu.Item asChild>
-                  <button
-                    onClick={() => onDelete?.(checklist.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 rounded hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer outline-none w-full"
-                  >
-                    <Trash2 size={14} />
-                    {t('common.delete')}
-                  </button>
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Root>
+          <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+            <Button type="text" icon={<MoreVertical size={16} />} aria-label={t('common.actions')} />
+          </Dropdown>
         </div>
 
         {checklist.description && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+          <Paragraph type="secondary" className="mt-2 line-clamp-2" style={{ marginBottom: 0 }}>
             {checklist.description}
-          </p>
+          </Paragraph>
         )}
 
-        <div className="mt-3 flex flex-wrap gap-1">
-          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[status]}`}>
+        <Space className="mt-3" size={[4, 4]} wrap>
+          <Tag color={statusColors[status]}>
             {t(statusLabelKeys[status])}
-          </span>
+          </Tag>
           {checklist.tags?.length > 0 && (
             <TagPills tags={checklist.tags} maxVisible={3} size="sm" />
           )}
-        </div>
+        </Space>
 
-        <div className="mt-4 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1">
+        <Space className="mt-4 w-full justify-between" size={8} wrap>
+          <Text type="secondary" className="inline-flex items-center gap-1 text-xs">
             <CheckSquare size={14} />
             <span>{t('checklists.itemsCount', { count: totalItems })}</span>
-          </div>
+          </Text>
           {checklist.folder_id && (
-            <div className="flex items-center gap-1">
+            <Text type="secondary" className="inline-flex items-center gap-1 text-xs">
               <Folder size={14} />
               <span>{t('checklists.inFolder')}</span>
-            </div>
+            </Text>
           )}
           {checklist.execution_mode === 'sequential' && (
-            <div className="flex items-center gap-1">
+            <Text type="secondary" className="inline-flex items-center gap-1 text-xs">
               <Clock size={14} />
               <span>{t('checklists.sequential')}</span>
-            </div>
+            </Text>
           )}
-        </div>
-      </div>
+        </Space>
+      </Card>
     </motion.div>
   )
 }

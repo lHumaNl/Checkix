@@ -73,7 +73,7 @@ export function CalendarPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col gap-4 lg:flex-row" aria-label={t('calendar.title')}>
+    <div className="flex flex-col gap-4 lg:flex-row" style={{ height: 'calc(100vh - 8rem)' }} aria-label={t('calendar.title')}>
       <div className="lg:w-64 shrink-0 space-y-4">
         <MiniCalendar
           events={events}

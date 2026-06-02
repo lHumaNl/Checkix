@@ -121,7 +121,7 @@ export function CalendarView({ events, onEventClick, onCreateEvent, currentDate:
           </Button>
         </div>
       </div>
-      <div className="h-[calc(100%-64px)]">
+      <div style={{ height: 'calc(100% - 64px)' }}>
         <Calendar<FormattedEvent>
           localizer={localizer}
           events={formattedEvents}

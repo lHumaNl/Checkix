@@ -117,4 +117,13 @@ export const messageCatalogAdditions = {
   'profile.employeeIdPlaceholder': { en: 'e.g. EMP-1234', ru: 'например, EMP-1234', es: 'p. ej. EMP-1234', de: 'z. B. EMP-1234', fr: 'p. ex. EMP-1234', zh: '例如 EMP-1234' },
   'profile.timezonePlaceholder': { en: 'e.g. America/New_York', ru: 'например, America/New_York', es: 'p. ej. America/New_York', de: 'z. B. America/New_York', fr: 'p. ex. America/New_York', zh: '例如 America/New_York' },
   'profile.languagePlaceholder': { en: 'e.g. en', ru: 'например, en', es: 'p. ej. en', de: 'z. B. en', fr: 'p. ex. en', zh: '例如 en' },
+  'runLinks.executeErrorFallback': { en: 'Failed to execute run link', ru: 'Не удалось запустить ссылку', es: 'No se pudo ejecutar el enlace', de: 'Ausführungslink konnte nicht gestartet werden', fr: 'Impossible d’exécuter le lien', zh: '无法执行运行链接' },
+  'runLinks.executeStartedTitle': { en: 'Checklist Started!', ru: 'Чек-лист запущен!', es: '¡Lista iniciada!', de: 'Checkliste gestartet!', fr: 'Check-list démarrée !', zh: '检查清单已启动！' },
+  'runLinks.executeStartedDescription': { en: 'Your checklist instance has been created successfully.', ru: 'Экземпляр чек-листа успешно создан.', es: 'La instancia de la lista se creó correctamente.', de: 'Deine Checklisten-Instanz wurde erfolgreich erstellt.', fr: 'Votre instance de check-list a été créée.', zh: '检查清单实例已成功创建。' },
+  'runLinks.openChecklist': { en: 'Open Checklist', ru: 'Открыть чек-лист', es: 'Abrir lista', de: 'Checkliste öffnen', fr: 'Ouvrir la check-list', zh: '打开检查清单' },
+  'runLinks.executeTitle': { en: 'Run Checklist', ru: 'Запустить чек-лист', es: 'Ejecutar lista', de: 'Checkliste ausführen', fr: 'Exécuter la check-list', zh: '运行检查清单' },
+  'runLinks.executeDescription': { en: 'Click the button below to start a new checklist instance from this run link.', ru: 'Нажмите кнопку ниже, чтобы создать экземпляр чек-листа по этой ссылке.', es: 'Pulsa el botón de abajo para iniciar una nueva instancia desde este enlace.', de: 'Klicke unten, um über diesen Link eine neue Checklisten-Instanz zu starten.', fr: 'Cliquez sur le bouton ci-dessous pour créer une instance depuis ce lien.', zh: '点击下方按钮，从此运行链接启动新的检查清单实例。' },
+  'runLinks.executeStarting': { en: 'Starting…', ru: 'Запуск…', es: 'Iniciando…', de: 'Wird gestartet…', fr: 'Démarrage…', zh: '正在启动…' },
+  'runLinks.executeStart': { en: 'Start Checklist', ru: 'Запустить чек-лист', es: 'Iniciar lista', de: 'Checkliste starten', fr: 'Démarrer la check-list', zh: '启动检查清单' },
+  'runLinks.executePoweredBy': { en: 'Powered by', ru: 'Работает на', es: 'Con tecnología de', de: 'Bereitgestellt von', fr: 'Propulsé par', zh: '技术支持' },
 } as const satisfies Additions

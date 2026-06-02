@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
-from checkix.dependencies import PaginationParams, get_current_user, paginate
+from checkix.dependencies import PaginationParams, get_current_user, paginate_mapped
 from checkix.exceptions import NotFoundException
 from checkix.models.checklist import ChecklistTemplate
 from checkix.models.run_link import RunLink
@@ -19,6 +19,46 @@ from checkix.schemas.run_link import RunLinkCreate, RunLinkOut
 from checkix.schemas.common import MessageResponse
 
 router = APIRouter(tags=["run-links"])
+
+ACCESS_TYPE_DISPLAY = {"public": "Public", "restricted": "Restricted"}
+
+
+def _utc_datetime(value: datetime) -> datetime:
+    return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+
+def _is_expired(link: RunLink) -> bool:
+    return link.expires_at is not None and _utc_datetime(link.expires_at) < datetime.now(timezone.utc)
+
+
+def _run_link_data(link: RunLink, template_name: str | None, created_by_email: str | None) -> dict:
+    is_expired = _is_expired(link)
+    is_max_uses_reached = link.max_uses is not None and link.usage_count >= link.max_uses
+    return {
+        "id": link.id,
+        "template_id": link.checklist_template_id,
+        "checklist_template_name": template_name or "",
+        "unique_id": link.unique_id,
+        "token": link.unique_id,
+        "name": link.name,
+        "access_type": link.access_type,
+        "access_type_display": ACCESS_TYPE_DISPLAY.get(link.access_type, link.access_type.title()),
+        "max_uses": link.max_uses,
+        "usage_count": link.usage_count,
+        "use_count": link.usage_count,
+        "expires_at": link.expires_at,
+        "is_expired": is_expired,
+        "is_max_uses_reached": is_max_uses_reached,
+        "is_valid": not is_expired and not is_max_uses_reached,
+        "created_by": link.created_by_id,
+        "created_by_email": created_by_email or "",
+        "created_at": link.created_at,
+        "updated_at": link.updated_at,
+    }
+
+
+def _run_link_row(row) -> dict:
+    return _run_link_data(row[0], row.checklist_template_name, row.created_by_email)
 
 
 async def _get_link_or_404(
@@ -66,11 +106,17 @@ async def list_run_links(
 ) -> dict:
     """Return a paginated list of run links for the current user."""
     query = (
-        select(RunLink)
+        select(
+            RunLink,
+            ChecklistTemplate.name.label("checklist_template_name"),
+            User.email.label("created_by_email"),
+        )
+        .outerjoin(ChecklistTemplate, ChecklistTemplate.id == RunLink.checklist_template_id)
+        .outerjoin(User, User.id == RunLink.created_by_id)
         .where(RunLink.created_by_id == current_user.id)
         .order_by(RunLink.created_at.desc())
     )
-    return await paginate(db, query, pagination)
+    return await paginate_mapped(db, query, pagination, _run_link_row)
 
 
 @router.post("/", response_model=RunLinkOut, status_code=201)
@@ -78,17 +124,17 @@ async def create_run_link(
     body: RunLinkCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> RunLink:
+) -> dict:
     """Create a new run link."""
     import uuid
 
-    await _get_owned_template_or_404(db, body.template_id, current_user.id)
+    template = await _get_owned_template_or_404(db, body.template_id, current_user.id)
 
     link = RunLink(
         checklist_template_id=body.template_id,
         unique_id=str(uuid.uuid4()),
         name=body.name or "Run Link",
-        access_type="public",
+        access_type=body.access_type,
         max_uses=body.max_uses,
         expires_at=body.expires_at,
         created_by_id=current_user.id,
@@ -96,7 +142,7 @@ async def create_run_link(
     db.add(link)
     await db.commit()
     await db.refresh(link)
-    return link
+    return _run_link_data(link, template.name, current_user.email)
 
 
 @router.delete("/{link_id}/", response_model=MessageResponse)
@@ -122,19 +168,26 @@ async def delete_run_link(
 async def get_run_link_by_unique_id(
     unique_id: str,
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> RunLink:
+) -> dict:
     """Return a run link by its unique public ID.
 
     This is a public endpoint -- no authentication required.
     """
     result = await db.execute(
-        select(RunLink).where(RunLink.unique_id == unique_id)
+        select(
+            RunLink,
+            ChecklistTemplate.name.label("checklist_template_name"),
+            User.email.label("created_by_email"),
+        )
+        .outerjoin(ChecklistTemplate, ChecklistTemplate.id == RunLink.checklist_template_id)
+        .outerjoin(User, User.id == RunLink.created_by_id)
+        .where(RunLink.unique_id == unique_id)
     )
-    link = result.scalar_one_or_none()
-    if link is None:
+    row = result.one_or_none()
+    if row is None:
         raise NotFoundException(detail="Run link not found")
 
-    return link
+    return _run_link_row(row)
 
 
 @router.post("/execute/{unique_id}/", response_model=MessageResponse)
@@ -157,7 +210,7 @@ async def execute_run_link(
     if not link.access_type == "public":
         raise NotFoundException(detail="Run link not found")
 
-    if link.expires_at and link.expires_at < datetime.now(timezone.utc):
+    if _is_expired(link):
         raise NotFoundException(detail="Run link has expired")
 
     if link.max_uses is not None and link.usage_count >= link.max_uses:

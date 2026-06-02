@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Annotated, Any
 
 import jwt
@@ -146,6 +147,29 @@ async def paginate(
 
     return {
         "items": serialized_items,
+        "total": total,
+        "page": pagination.page,
+        "page_size": pagination.page_size,
+        "total_pages": total_pages,
+    }
+
+
+async def paginate_mapped(
+    db: AsyncSession,
+    query: Any,
+    pagination: PaginationParams,
+    mapper: Callable[[Any], dict[str, Any]],
+) -> dict[str, Any]:
+    """Execute a row query and serialize each row through *mapper*."""
+    from sqlalchemy import func
+
+    count_query = select(func.count()).select_from(query.order_by(None).subquery())
+    total: int = (await db.execute(count_query)).scalar_one()
+    result = await db.execute(query.offset(pagination.offset).limit(pagination.page_size))
+    items = [jsonable_encoder(mapper(row)) for row in result.all()]
+    total_pages = (total + pagination.page_size - 1) // pagination.page_size if total > 0 else 0
+    return {
+        "items": items,
         "total": total,
         "page": pagination.page,
         "page_size": pagination.page_size,

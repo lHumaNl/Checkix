@@ -15,16 +15,16 @@ test.describe('Notifications Page', () => {
   })
 
   test('shows tabs for Rules and Logs', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Rules' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Logs' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /rules/i })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /logs/i })).toBeVisible()
   })
 
   test('switches to Logs tab', async ({ page }) => {
-    await page.getByRole('button', { name: 'Logs' }).click()
+    await page.getByRole('tab', { name: /logs/i }).click()
     await page.waitForTimeout(500)
 
     // Should show logs section content (empty state or table)
-    const noLogs = page.getByText(/no notification logs/i).first()
+    const noLogs = page.getByText(/no notification logs found\.?/i).first()
     const logsTable = page.locator('table')
     const hasContent = await noLogs.isVisible({ timeout: 3000 }).catch(() => false) ||
                        await logsTable.isVisible({ timeout: 2000 }).catch(() => false)
@@ -39,8 +39,8 @@ test.describe('Notifications Page', () => {
   })
 
   test('shows empty state when no rules', async ({ page }) => {
-    const emptyState = page.getByText(/no.*notification.*rules/i)
-    const cards = page.locator('[class*="grid"] > div, [class*="space-y"] > div')
+    const emptyState = page.getByText(/no notification rules found\.?/i)
+    const cards = page.getByRole('listitem')
 
     const hasEmpty = await emptyState.isVisible({ timeout: 2000 }).catch(() => false)
     const hasCards = (await cards.count()) > 0

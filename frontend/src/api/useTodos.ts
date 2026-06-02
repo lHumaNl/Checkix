@@ -69,7 +69,7 @@ export function useUpdateTodoList() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<TodoList> }) => {
-      const { data: response } = await client.patch<TodoList>(`/todos/${id}/`, data)
+      const { data: response } = await client.put<TodoList>(`/todos/${id}/`, data)
       return response
     },
     onSuccess: () => {
@@ -108,7 +108,7 @@ export function useUpdateTodoItem() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ listId, itemId, data }: { listId: number; itemId: number; data: Partial<TodoItem> }) => {
-      const { data: response } = await client.patch<TodoItem>(`/todos/${listId}/items/${itemId}/`, data)
+      const { data: response } = await client.put<TodoItem>(`/todos/${listId}/items/${itemId}/`, data)
       return response
     },
     onSuccess: () => {

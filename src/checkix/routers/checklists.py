@@ -394,7 +394,11 @@ async def duplicate_template(
                 order=item.order,
                 is_required=item.is_required,
                 priority=item.priority,
-                placeholder_id=placeholder_map.get(item.placeholder_id),
+                placeholder_id=(
+                    placeholder_map.get(item.placeholder_id)
+                    if item.placeholder_id is not None
+                    else None
+                ),
                 is_halt=item.is_halt,
                 halt_message=item.halt_message,
             )

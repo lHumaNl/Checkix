@@ -1,477 +1,317 @@
 import { useState } from 'react'
-import { Plus, Trash2, Copy, Search, Link2, Clock, Users } from 'lucide-react'
+import type { Dayjs } from 'dayjs'
+import {
+  Button,
+  Card,
+  DatePicker,
+  Empty,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  QRCode,
+  Segmented,
+  Skeleton,
+  Space,
+  Statistic,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd'
+import {
+  ClockCircleOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  LinkOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { useRunLinks, useCreateRunLink, useDeleteRunLink } from '@/api/useRunLinks'
 import type { RunLink } from '@/api/useRunLinks'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { useI18n } from '@/i18n'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+type AccessFilter = 'all' | 'public' | 'restricted'
+
+interface CreateRunLinkValues {
+  access_type: RunLink['access_type']
+  expires_at?: Dayjs
+  max_uses?: number | null
+  name: string
+  template_id: number
+}
 
 function formatDate(iso: string | null, emptyLabel: string): string {
   if (!iso) return emptyLabel
   return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
     day: 'numeric',
+    month: 'short',
+    year: 'numeric',
   })
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+function getRunLinkUrl(uniqueId: string): string {
+  return `${window.location.origin}/run/${uniqueId}`
+}
 
-function AccessTypeBadge({ type }: { type: RunLink['access_type'] }) {
+function buildCreatePayload(values: CreateRunLinkValues) {
+  const payload: Parameters<ReturnType<typeof useCreateRunLink>['mutate']>[0] = {
+    access_type: values.access_type,
+    name: values.name.trim(),
+    template_id: values.template_id,
+  }
+  if (values.expires_at) payload.expires_at = values.expires_at.format('YYYY-MM-DD')
+  if (values.max_uses) payload.max_uses = values.max_uses
+  return payload
+}
+
+function AccessTag({ type }: { type: RunLink['access_type'] }) {
   const { t } = useI18n()
-  if (type === 'public') {
-    return (
-      <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
-        {t('runLinks.public')}
-      </span>
-    )
-  }
   return (
-    <span className="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2.5 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-300">
-      {t('runLinks.restricted')}
-    </span>
+    <Tag color={type === 'public' ? 'green' : 'gold'}>
+      {type === 'public' ? t('runLinks.public') : t('runLinks.restricted')}
+    </Tag>
   )
 }
 
-function ValidityBadge({ link }: { link: RunLink }) {
+function ValidityTag({ link }: { link: RunLink }) {
   const { t } = useI18n()
-  if (link.is_expired) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
-        {t('runLinks.expired')}
-      </span>
-    )
-  }
-  if (link.is_max_uses_reached) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/30 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-300">
-        {t('runLinks.limitReached')}
-      </span>
-    )
-  }
+  if (link.is_expired) return <Tag color="red">{t('runLinks.expired')}</Tag>
+  if (link.is_max_uses_reached) return <Tag color="orange">{t('runLinks.limitReached')}</Tag>
+  return <Tag color="success">{t('runLinks.valid')}</Tag>
+}
+
+function RunLinkSkeleton() {
   return (
-    <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
-      {t('runLinks.valid')}
-    </span>
+    <Card className="h-full">
+      <Skeleton active paragraph={{ rows: 4 }} title={{ width: '60%' }} />
+    </Card>
   )
-}
-
-function SkeletonCard() {
-  return (
-    <div className="animate-pulse rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-3">
-      <div className="h-4 w-1/3 rounded bg-gray-200 dark:bg-gray-700" />
-      <div className="h-3 w-1/2 rounded bg-gray-100 dark:bg-gray-600" />
-      <div className="flex gap-2">
-        <div className="h-5 w-16 rounded-full bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-16 rounded-full bg-gray-200 dark:bg-gray-700" />
-      </div>
-      <div className="h-3 w-2/3 rounded bg-gray-100 dark:bg-gray-600" />
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Create form modal
-// ---------------------------------------------------------------------------
-
-interface CreateFormState {
-  name: string
-  checklist_template: string
-  access_type: 'public' | 'restricted'
-  expires_at: string
-  max_uses: string
-}
-
-const INITIAL_FORM: CreateFormState = {
-  name: '',
-  checklist_template: '',
-  access_type: 'public',
-  expires_at: '',
-  max_uses: '',
 }
 
 interface CreateRunLinkModalProps {
   onClose: () => void
+  open: boolean
 }
 
-function CreateRunLinkModal({ onClose }: CreateRunLinkModalProps) {
+function CreateRunLinkModal({ onClose, open }: CreateRunLinkModalProps) {
   const { t } = useI18n()
-  const [form, setForm] = useState<CreateFormState>(INITIAL_FORM)
+  const [form] = Form.useForm<CreateRunLinkValues>()
   const createMutation = useCreateRunLink()
 
-  function handleChange(field: keyof CreateFormState, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }))
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-
-    const templateId = parseInt(form.checklist_template, 10)
-    if (isNaN(templateId) || templateId <= 0) {
-      toast({ title: t('runLinks.validationTemplateRequired'), variant: 'destructive' })
-      return
-    }
-
-    const payload: Parameters<typeof createMutation.mutate>[0] = {
-      name: form.name.trim(),
-      template_id: templateId,
-      access_type: form.access_type,
-    }
-    if (form.expires_at) payload.expires_at = form.expires_at
-    if (form.max_uses) payload.max_uses = parseInt(form.max_uses, 10)
-
-    createMutation.mutate(payload, {
+  function handleFinish(values: CreateRunLinkValues) {
+    createMutation.mutate(buildCreatePayload(values), {
+      onError: () => toast({ title: t('runLinks.createFailed'), variant: 'destructive' }),
       onSuccess: () => {
         toast({ title: t('runLinks.created'), variant: 'default' })
+        form.resetFields()
         onClose()
       },
-      onError: () => {
-        toast({ title: t('runLinks.createFailed'), variant: 'destructive' })
-      },
     })
   }
 
+  function handleFinishFailed({ errorFields }: { errorFields: { name: (string | number)[] }[] }) {
+    if (errorFields.some((field) => field.name.includes('template_id'))) {
+      toast({ title: t('runLinks.validationTemplateRequired'), variant: 'destructive' })
+    }
+  }
+
   return (
-    // Backdrop
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <Modal
+      confirmLoading={createMutation.isPending}
+      okText={createMutation.isPending ? t('common.creating') : t('runLinks.createLink')}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      open={open}
+      title={t('runLinks.new')}
     >
-      <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('runLinks.new')}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label={t('common.close')}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('common.name')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder={t('runLinks.namePlaceholder')}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Checklist Template ID */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('runLinks.checklistTemplateId')} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              required
-              min={1}
-              value={form.checklist_template}
-              onChange={(e) => handleChange('checklist_template', e.target.value)}
-              placeholder={t('runLinks.templatePlaceholder')}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Access Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('runLinks.accessType')}
-            </label>
-            <select
-              value={form.access_type}
-              onChange={(e) => handleChange('access_type', e.target.value as 'public' | 'restricted')}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            >
-              <option value="public">{t('runLinks.public')}</option>
-              <option value="restricted">{t('runLinks.restricted')}</option>
-            </select>
-          </div>
-
-          {/* Expires At */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('runLinks.expiresAt')} <span className="text-gray-400 font-normal">({t('common.optional')})</span>
-            </label>
-            <input
-              type="date"
-              value={form.expires_at}
-              onChange={(e) => handleChange('expires_at', e.target.value)}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Max Uses */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('runLinks.maxUses')} <span className="text-gray-400 font-normal">({t('runLinks.maxUsesOptional')})</span>
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={form.max_uses}
-              onChange={(e) => handleChange('max_uses', e.target.value)}
-              placeholder={t('common.unlimited')}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-4 py-2 text-sm font-medium text-white transition-colors"
-            >
-              {createMutation.isPending ? t('common.creating') : t('runLinks.createLink')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <Form
+        form={form}
+        initialValues={{ access_type: 'public' }}
+        layout="vertical"
+        onFinish={handleFinish}
+        onFinishFailed={handleFinishFailed}
+      >
+        <Form.Item name="name" label={t('common.name')} rules={[{ required: true }]}>
+          <Input placeholder={t('runLinks.namePlaceholder')} />
+        </Form.Item>
+        <Form.Item
+          label={t('runLinks.checklistTemplateId')}
+          name="template_id"
+          rules={[{ type: 'number', min: 1, required: true, message: t('runLinks.validationTemplateRequired') }]}
+        >
+          <InputNumber className="w-full" min={1} placeholder={t('runLinks.templatePlaceholder')} />
+        </Form.Item>
+        <Form.Item label={t('runLinks.accessType')} name="access_type">
+          <Segmented
+            block
+            options={[
+              { label: t('runLinks.public'), value: 'public' },
+              { label: t('runLinks.restricted'), value: 'restricted' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item label={`${t('runLinks.expiresAt')} (${t('common.optional')})`} name="expires_at">
+          <DatePicker className="w-full" />
+        </Form.Item>
+        <Form.Item label={t('runLinks.maxUses')} name="max_uses" extra={t('runLinks.maxUsesOptional')}>
+          <InputNumber className="w-full" min={1} placeholder={t('common.unlimited')} />
+        </Form.Item>
+      </Form>
+    </Modal>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Run Link Card
-// ---------------------------------------------------------------------------
 
 interface RunLinkCardProps {
+  deleting: boolean
   link: RunLink
-  onDeleteRequest: (link: RunLink) => void
+  onCopy: (link: RunLink) => void
+  onDelete: (link: RunLink) => void
 }
 
-function RunLinkCard({ link, onDeleteRequest }: RunLinkCardProps) {
+function RunLinkCard({ deleting, link, onCopy, onDelete }: RunLinkCardProps) {
   const { t } = useI18n()
-  function handleCopy() {
-    const url = `${window.location.origin}/run/${link.unique_id}`
-    navigator.clipboard.writeText(url).then(() => {
-      toast({ title: t('runLinks.copied'), variant: 'default' })
-    }).catch(() => {
-      toast({ title: t('runLinks.copyFailed'), variant: 'destructive' })
-    })
-  }
-
-  const usageLabel =
-    link.max_uses != null
-      ? `${link.usage_count} / ${link.max_uses}`
-      : `${link.usage_count} / ${t('common.unlimited')}`
+  const url = getRunLinkUrl(link.unique_id)
+  const usage = link.max_uses == null ? t('common.unlimited') : link.max_uses
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-      {/* Top row: name + badges */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate">{link.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+    <Card
+      actions={[
+        <Button key="copy" icon={<CopyOutlined />} onClick={() => onCopy(link)} type="text">
+          {t('runLinks.copyLink')}
+        </Button>,
+        <Popconfirm
+          cancelText={t('common.cancel')}
+          description={t('runLinks.deleteConfirm', { name: link.name })}
+          key="delete"
+          okButtonProps={{ danger: true, loading: deleting }}
+          okText={t('common.delete')}
+          onConfirm={() => onDelete(link)}
+          title={t('runLinks.deleteTitle')}
+        >
+          <Button danger icon={<DeleteOutlined />} loading={deleting} type="text">
+            {t('common.delete')}
+          </Button>
+        </Popconfirm>,
+      ]}
+      className="h-full"
+      hoverable
+    >
+      <Flex align="start" gap={16} justify="space-between">
+        <Space direction="vertical" size={8} className="min-w-0 flex-1">
+          <Tooltip title={link.name}>
+            <Typography.Title className="!mb-0 truncate" level={5}>{link.name}</Typography.Title>
+          </Tooltip>
+          <Typography.Text type="secondary" className="block truncate">
             {t('runLinks.templateId')}: {link.template_id}
             {link.checklist_template_name ? ` — ${link.checklist_template_name}` : ''}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-1.5">
-          <AccessTypeBadge type={link.access_type} />
-          <ValidityBadge link={link} />
-        </div>
+          </Typography.Text>
+          <Space size={[0, 4]} wrap>
+            <AccessTag type={link.access_type} />
+            <ValidityTag link={link} />
+          </Space>
+        </Space>
+        <QRCode bordered={false} size={74} type="svg" value={url} />
+      </Flex>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <Statistic prefix={<UserOutlined />} title={t('checklists.uses')} value={`${link.usage_count} / ${usage}`} />
+        <Statistic
+          prefix={<ClockCircleOutlined />}
+          title={t('runLinks.expires')}
+          value={formatDate(link.expires_at, t('common.never'))}
+        />
       </div>
 
-      {/* Meta info */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
-        <span className="inline-flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5 shrink-0" />
-          {usageLabel}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Clock className="h-3.5 w-3.5 shrink-0" />
-          {t('runLinks.expires')}: {formatDate(link.expires_at, t('common.never'))}
-        </span>
-      </div>
-
-      {/* Unique ID / URL preview */}
-      <div className="flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-3 py-2">
-        <Link2 className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-        <span className="truncate text-xs font-mono text-gray-500 dark:text-gray-400">
-          {window.location.origin}/run/{link.unique_id}
-        </span>
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center justify-between pt-1">
-        <span className="text-xs text-gray-400 dark:text-gray-500">
-          {t('common.created')} {formatDate(link.created_at, t('common.never'))}
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-          >
-            <Copy className="h-3.5 w-3.5" />
-            {t('runLinks.copyLink')}
-          </button>
-          <button
-            onClick={() => onDeleteRequest(link)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-700 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            {t('common.delete')}
-          </button>
-        </div>
-      </div>
-    </div>
+      <Flex className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800" gap={8}>
+        <LinkOutlined className="text-gray-400" />
+        <Typography.Text code className="truncate !text-xs">{url}</Typography.Text>
+      </Flex>
+      <Typography.Text type="secondary" className="mt-3 block text-xs">
+        {t('common.created')} {formatDate(link.created_at, t('common.never'))}
+      </Typography.Text>
+    </Card>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Empty State
-// ---------------------------------------------------------------------------
 
 function EmptyState({ hasFilters }: { hasFilters: boolean }) {
   const { t } = useI18n()
+  const title = hasFilters ? t('runLinks.noMatch') : t('runLinks.noLinks')
+  const description = hasFilters ? t('runLinks.adjustFilters') : t('runLinks.createFirst')
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-16 px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 dark:bg-blue-900/20 mb-4">
-        <Link2 className="h-7 w-7 text-blue-500 dark:text-blue-400" />
-      </div>
-      {hasFilters ? (
-        <>
-          <p className="text-base font-medium text-gray-900 dark:text-white">{t('runLinks.noMatch')}</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('runLinks.adjustFilters')}
-          </p>
-        </>
-      ) : (
-        <>
-          <p className="text-base font-medium text-gray-900 dark:text-white">{t('runLinks.noLinks')}</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('runLinks.createFirst')}
-          </p>
-        </>
-      )}
-    </div>
+    <Card>
+      <Empty description={<Space direction="vertical"><strong>{title}</strong><span>{description}</span></Space>} />
+    </Card>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
 
 export function RunLinksPage() {
   const { t } = useI18n()
   const [search, setSearch] = useState('')
-  const [accessTypeFilter, setAccessTypeFilter] = useState<'all' | 'public' | 'restricted'>('all')
+  const [accessTypeFilter, setAccessTypeFilter] = useState<AccessFilter>('all')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<RunLink | null>(null)
-
-  const queryParams = {
+  const { data, isLoading } = useRunLinks({
+    access_type: accessTypeFilter === 'all' ? undefined : accessTypeFilter,
     search: search || undefined,
-    access_type: accessTypeFilter !== 'all' ? accessTypeFilter : undefined,
+  })
+  const deleteMutation = useDeleteRunLink()
+  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.items ?? [])
+  const hasFilters = Boolean(search) || accessTypeFilter !== 'all'
+
+  function handleCopy(link: RunLink) {
+    navigator.clipboard.writeText(getRunLinkUrl(link.unique_id))
+      .then(() => toast({ title: t('runLinks.copied'), variant: 'default' }))
+      .catch(() => toast({ title: t('runLinks.copyFailed'), variant: 'destructive' }))
   }
 
-  const { data, isLoading } = useRunLinks(queryParams)
-  const deleteMutation = useDeleteRunLink()
-
-  const runLinks: RunLink[] = Array.isArray(data) ? data : (data?.items ?? [])
-
-  function handleDeleteConfirm() {
-    if (!deleteTarget) return
-    deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        toast({ title: t('runLinks.deleted'), variant: 'default' })
-        setDeleteTarget(null)
-      },
-      onError: () => {
-        toast({ title: t('runLinks.deleteFailed'), variant: 'destructive' })
-        setDeleteTarget(null)
-      },
+  function handleDelete(link: RunLink) {
+    deleteMutation.mutate(link.id, {
+      onError: () => toast({ title: t('runLinks.deleteFailed'), variant: 'destructive' }),
+      onSuccess: () => toast({ title: t('runLinks.deleted'), variant: 'default' }),
     })
   }
 
-  const hasFilters = !!search || accessTypeFilter !== 'all'
-
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <Flex align="start" gap={16} justify="space-between" wrap="wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('runLinks.title')}</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-0.5">
-            {t('runLinks.subtitle')}
-          </p>
+          <Typography.Title className="!mb-1" level={2}>{t('runLinks.title')}</Typography.Title>
+          <Typography.Text type="secondary">{t('runLinks.subtitle')}</Typography.Text>
         </div>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium text-white transition-colors shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
+        <Button icon={<PlusOutlined />} onClick={() => setIsCreateOpen(true)} type="primary">
           {t('runLinks.new')}
-        </button>
-      </div>
+        </Button>
+      </Flex>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
+      <Card>
+        <Flex align="center" gap={12} wrap="wrap">
+          <Input
+            allowClear
+            className="max-w-sm"
+            onChange={(event) => setSearch(event.target.value)}
             placeholder={t('runLinks.search')}
+            prefix={<SearchOutlined />}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
           />
-        </div>
+          <Segmented
+            onChange={(value) => setAccessTypeFilter(value as AccessFilter)}
+            options={[
+              { label: t('runLinks.all'), value: 'all' },
+              { label: t('runLinks.public'), value: 'public' },
+              { label: t('runLinks.restricted'), value: 'restricted' },
+            ]}
+            value={accessTypeFilter}
+          />
+        </Flex>
+      </Card>
 
-        {/* Access Type Filter */}
-        <div className="flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-1">
-          {(['all', 'public', 'restricted'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setAccessTypeFilter(type)}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-                accessTypeFilter === type
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {type === 'all' ? t('runLinks.all') : type === 'public' ? t('runLinks.public') : t('runLinks.restricted')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+          {Array.from({ length: 6 }).map((_, index) => <RunLinkSkeleton key={index} />)}
         </div>
       ) : runLinks.length === 0 ? (
         <EmptyState hasFilters={hasFilters} />
@@ -479,33 +319,17 @@ export function RunLinksPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {runLinks.map((link) => (
             <RunLinkCard
+              deleting={deleteMutation.isPending}
               key={link.id}
               link={link}
-              onDeleteRequest={setDeleteTarget}
+              onCopy={handleCopy}
+              onDelete={handleDelete}
             />
           ))}
         </div>
       )}
 
-      {/* Create Modal */}
-      {isCreateOpen && (
-        <CreateRunLinkModal onClose={() => setIsCreateOpen(false)} />
-      )}
-
-      {/* Delete Confirm Dialog */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-        title={t('runLinks.deleteTitle')}
-        description={
-          deleteTarget
-            ? t('runLinks.deleteConfirm', { name: deleteTarget.name })
-            : undefined
-        }
-        confirmLabel={t('common.delete')}
-        variant="destructive"
-        onConfirm={handleDeleteConfirm}
-      />
+      <CreateRunLinkModal onClose={() => setIsCreateOpen(false)} open={isCreateOpen} />
     </div>
   )
 }

@@ -70,7 +70,7 @@ export function useUpdateWebhook() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Webhook> & { secret?: string } }) => {
-      const { data: response } = await client.patch<Webhook>(`/webhooks/${id}/`, data)
+      const { data: response } = await client.put<Webhook>(`/webhooks/${id}/`, data)
       return response
     },
     onSuccess: () => {
@@ -95,8 +95,8 @@ export function useDeleteWebhook() {
 export function useToggleWebhook() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (id: number) => {
-      const { data } = await client.post<Webhook>(`/webhooks/${id}/toggle_active/`)
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      const { data } = await client.put<Webhook>(`/webhooks/${id}/`, { is_active: isActive })
       return data
     },
     onSuccess: () => {

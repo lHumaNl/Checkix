@@ -1,145 +1,92 @@
 import { useState } from 'react'
-import { Plus, Trash2, Search, UserCheck, Filter } from 'lucide-react'
-import * as Dialog from '@radix-ui/react-dialog'
-import { X } from 'lucide-react'
-import {
-  useAssignments,
-  useCreateAssignment,
-  useDeleteAssignment,
-  type Assignment,
-} from '@/api/useAssignments'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { DeleteOutlined, FilterOutlined, PlusOutlined, SearchOutlined, UserSwitchOutlined } from '@ant-design/icons'
+import { Alert, Button, Card, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Skeleton, Space, Switch, Table, Tag, Typography } from 'antd'
+import type { TableColumnsType } from 'antd'
+import { useAssignments, useCreateAssignment, useDeleteAssignment, type Assignment } from '@/api/useAssignments'
 import { toast } from '@/hooks/useToast'
 import { useI18n } from '@/i18n'
 import type { MessageKey } from '@/i18n/messages'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+type AssignmentTypeFilter = '' | Assignment['assignment_type']
+type AssigneeTypeFilter = '' | Assignment['assignee_type']
 
-type AssignmentTypeFilter = '' | 'template' | 'item' | 'runtime'
-type AssigneeTypeFilter = '' | 'user' | 'group' | 'parameter' | 'manager'
-
-interface CreateFormState {
-  assignment_type: 'template' | 'item' | 'runtime'
-  assignee_type: 'user' | 'group' | 'parameter' | 'manager'
-  checklist_template: string
-  checklist_item: string
-  checklist_instance: string
-  assignee_user: string
-  assignee_group: string
+interface CreateFormValues {
+  assignment_type: Assignment['assignment_type']
+  assignee_type: Assignment['assignee_type']
+  checklist_template: number | null
+  checklist_item: number | null
+  checklist_instance: number | null
+  assignee_user: number | null
+  assignee_group: number | null
   assignee_parameter: string
   is_exclusive: boolean
   auto_notify: boolean
 }
 
-const defaultForm: CreateFormState = {
+const MIN_ID = 1
+const EMPTY_TEXT = '—'
+
+const defaultForm: CreateFormValues = {
   assignment_type: 'template',
   assignee_type: 'user',
-  checklist_template: '',
-  checklist_item: '',
-  checklist_instance: '',
-  assignee_user: '',
-  assignee_group: '',
+  checklist_template: null,
+  checklist_item: null,
+  checklist_instance: null,
+  assignee_user: null,
+  assignee_group: null,
   assignee_parameter: '',
   is_exclusive: false,
   auto_notify: true,
 }
 
-// ---------------------------------------------------------------------------
-// Helpers / sub-components
-// ---------------------------------------------------------------------------
-
-const ASSIGNMENT_TYPE_LABEL_KEYS: Record<Assignment['assignment_type'], MessageKey> = {
+const assignmentTypeLabels: Record<Assignment['assignment_type'], MessageKey> = {
   template: 'assignments.typeTemplate',
   item: 'assignments.typeItem',
   runtime: 'assignments.typeRuntime',
 }
 
-const ASSIGNEE_TYPE_LABEL_KEYS: Record<Assignment['assignee_type'], MessageKey> = {
+const assigneeTypeLabels: Record<Assignment['assignee_type'], MessageKey> = {
   user: 'assignments.assigneeUser',
   group: 'assignments.assigneeGroup',
   parameter: 'assignments.assigneeParameter',
   manager: 'assignments.assigneeManager',
 }
 
-const ASSIGNMENT_TYPE_COLORS: Record<Assignment['assignment_type'], string> = {
-  template: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  item: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  runtime: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+const assignmentTagColors: Record<Assignment['assignment_type'], string> = {
+  template: 'blue',
+  item: 'purple',
+  runtime: 'gold',
 }
 
-const ASSIGNEE_TYPE_COLORS: Record<Assignment['assignee_type'], string> = {
-  user: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  group: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-  parameter: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
-  manager: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+const assigneeTagColors: Record<Assignment['assignee_type'], string> = {
+  user: 'green',
+  group: 'geekblue',
+  parameter: 'magenta',
+  manager: 'orange',
 }
 
-function Badge({ label, colorClass }: { label: string; colorClass: string }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
-      {label}
-    </span>
-  )
+const assignmentTypeOptions = typedOptions(assignmentTypeLabels)
+const assigneeTypeOptions = typedOptions(assigneeTypeLabels)
+
+function typedOptions<T extends string>(labels: Record<T, MessageKey>) {
+  return Object.entries(labels) as Array<[T, MessageKey]>
 }
 
-function TableSkeleton() {
-  const { t } = useI18n()
-
-  return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 w-8"></th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.target')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.assignee')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('common.type')}</th>
-            <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{t('assignments.exclusive')}</th>
-            <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{t('common.actions')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <tr key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
-              <td className="px-4 py-3"><div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-5 w-16 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>
-              <td className="px-4 py-3"><div className="h-4 w-8 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" /></td>
-              <td className="px-4 py-3 text-right"><div className="h-8 w-8 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse ml-auto" /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+function numericRule(message: string) {
+  return [{ required: true, message }]
 }
 
-function EmptyState({ hasFilters }: { hasFilters: boolean }) {
-  const { t } = useI18n()
-
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
-      <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-        <UserCheck size={32} className="text-gray-400 dark:text-gray-500" />
-      </div>
-      <p className="text-lg font-medium mb-1 text-gray-700 dark:text-gray-300">
-        {hasFilters ? t('assignments.noMatch') : t('assignments.noAssignments')}
-      </p>
-      <p className="text-sm">
-        {hasFilters
-          ? t('assignments.adjustFilters')
-          : t('assignments.createFirst')}
-      </p>
-    </div>
-  )
+function textRule(message: string) {
+  return [{ required: true, whitespace: true, message }]
 }
 
-// ---------------------------------------------------------------------------
-// Create Assignment Modal
-// ---------------------------------------------------------------------------
+function getResultCount(data: ReturnType<typeof useAssignments>['data'], fallback: number) {
+  return data?.total ?? data?.count ?? fallback
+}
+
+function displayValue(value?: string | null) {
+  return value?.trim() || EMPTY_TEXT
+}
 
 interface CreateModalProps {
   open: boolean
@@ -148,64 +95,21 @@ interface CreateModalProps {
 
 function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
   const { t } = useI18n()
-  const [form, setForm] = useState<CreateFormState>(defaultForm)
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateFormState, string>>>({})
-
+  const [form] = Form.useForm<CreateFormValues>()
   const createMutation = useCreateAssignment()
+  const assignmentType = Form.useWatch('assignment_type', form) ?? 'template'
+  const assigneeType = Form.useWatch('assignee_type', form) ?? 'user'
 
-  const setField = <K extends keyof CreateFormState>(key: K, value: CreateFormState[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }))
-    if (errors[key]) setErrors(prev => ({ ...prev, [key]: undefined }))
+  const closeModal = () => {
+    form.resetFields()
+    onOpenChange(false)
   }
 
-  const validate = (): boolean => {
-    const next: Partial<Record<keyof CreateFormState, string>> = {}
-
-    if (form.assignment_type === 'template' && !form.checklist_template.trim()) {
-      next.checklist_template = t('assignments.validationTemplateRequired')
-    }
-    if (form.assignment_type === 'item' && !form.checklist_item.trim()) {
-      next.checklist_item = t('assignments.validationItemRequired')
-    }
-    if (form.assignment_type === 'runtime' && !form.checklist_instance.trim()) {
-      next.checklist_instance = t('assignments.validationInstanceRequired')
-    }
-    if (form.assignee_type === 'user' && !form.assignee_user.trim()) {
-      next.assignee_user = t('assignments.validationUserRequired')
-    }
-    if (form.assignee_type === 'group' && !form.assignee_group.trim()) {
-      next.assignee_group = t('assignments.validationGroupRequired')
-    }
-    if (form.assignee_type === 'parameter' && !form.assignee_parameter.trim()) {
-      next.assignee_parameter = t('assignments.validationParameterRequired')
-    }
-
-    setErrors(next)
-    return Object.keys(next).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validate()) return
-
-    const payload: Parameters<typeof createMutation.mutate>[0] = {
-      template_id: Number(form.checklist_template),
-      assignee_type: form.assignee_type,
-    }
-
-    if (form.assignee_type === 'user') {
-      payload.assignee_id = Number(form.assignee_user)
-    }
-    if (form.assignee_type === 'group') {
-      payload.assignee_id = Number(form.assignee_group)
-    }
-
-    createMutation.mutate(payload, {
+  const handleSubmit = (values: CreateFormValues) => {
+    createMutation.mutate(buildCreatePayload(values), {
       onSuccess: () => {
-          toast({ title: t('assignments.created'), variant: 'default' })
-        setForm(defaultForm)
-        setErrors({})
-        onOpenChange(false)
+        toast({ title: t('assignments.created'), variant: 'default' })
+        closeModal()
       },
       onError: () => {
         toast({ title: t('assignments.createFailed'), variant: 'destructive' })
@@ -213,240 +117,157 @@ function CreateAssignmentModal({ open, onOpenChange }: CreateModalProps) {
     })
   }
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      setForm(defaultForm)
-      setErrors({})
-    }
-    onOpenChange(nextOpen)
-  }
-
-  const inputClass =
-    'w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-  const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
-  const errorClass = 'mt-1 text-xs text-red-500'
-
   return (
-    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg max-h-[90vh] bg-white dark:bg-gray-900 rounded-xl shadow-xl z-50 overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-            <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('assignments.new')}
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                <X size={20} className="text-gray-500" />
-              </button>
-            </Dialog.Close>
-          </div>
+    <Modal
+      open={open}
+      title={t('assignments.new')}
+      okText={t('assignments.new')}
+      cancelText={t('common.cancel')}
+      okButtonProps={{ icon: <PlusOutlined /> }}
+      confirmLoading={createMutation.isPending}
+      onOk={() => form.submit()}
+      onCancel={closeModal}
+      destroyOnHidden
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={defaultForm}
+        onFinish={handleSubmit}
+        preserve
+      >
+        <Form.Item name="assignment_type" label={t('assignments.assignmentType')} required>
+          <Select options={localizedOptions(assignmentTypeOptions, t)} />
+        </Form.Item>
 
-          {/* Body */}
-          <form
-            id="create-assignment-form"
-            onSubmit={handleSubmit}
-            className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
-          >
-            {/* Assignment Type */}
-            <div>
-              <label className={labelClass}>{t('assignments.assignmentType')} *</label>
-              <select
-                value={form.assignment_type}
-                onChange={e => setField('assignment_type', e.target.value as CreateFormState['assignment_type'])}
-                className={inputClass}
-              >
-                <option value="template">{t('assignments.typeTemplate')}</option>
-                <option value="item">{t('assignments.typeItem')}</option>
-                <option value="runtime">{t('assignments.typeRuntime')}</option>
-              </select>
-            </div>
+        <TargetField assignmentType={assignmentType} />
 
-            {/* Target field — changes based on assignment_type */}
-            {form.assignment_type === 'template' && (
-              <div>
-                <label className={labelClass}>{t('assignments.targetTemplateId')} *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={form.checklist_template}
-                  onChange={e => setField('checklist_template', e.target.value)}
-                  placeholder={t('assignments.exampleNumber', { value: 42 })}
-                  className={inputClass}
-                />
-                {errors.checklist_template && <p className={errorClass}>{errors.checklist_template}</p>}
-              </div>
-            )}
+        <Form.Item name="assignee_type" label={t('assignments.assigneeType')} required>
+          <Select options={localizedOptions(assigneeTypeOptions, t)} />
+        </Form.Item>
 
-            {form.assignment_type === 'item' && (
-              <div>
-                <label className={labelClass}>{t('assignments.targetItemId')} *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={form.checklist_item}
-                  onChange={e => setField('checklist_item', e.target.value)}
-                  placeholder={t('assignments.exampleNumber', { value: 7 })}
-                  className={inputClass}
-                />
-                {errors.checklist_item && <p className={errorClass}>{errors.checklist_item}</p>}
-              </div>
-            )}
+        <AssigneeField assigneeType={assigneeType} />
 
-            {form.assignment_type === 'runtime' && (
-              <div>
-                <label className={labelClass}>{t('assignments.targetInstanceId')} *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={form.checklist_instance}
-                  onChange={e => setField('checklist_instance', e.target.value)}
-                  placeholder={t('assignments.exampleNumber', { value: 15 })}
-                  className={inputClass}
-                />
-                {errors.checklist_instance && <p className={errorClass}>{errors.checklist_instance}</p>}
-              </div>
-            )}
-
-            {/* Assignee Type */}
-            <div>
-              <label className={labelClass}>{t('assignments.assigneeType')} *</label>
-              <select
-                value={form.assignee_type}
-                onChange={e => setField('assignee_type', e.target.value as CreateFormState['assignee_type'])}
-                className={inputClass}
-              >
-                <option value="user">{t('assignments.assigneeUser')}</option>
-                <option value="group">{t('assignments.assigneeGroup')}</option>
-                <option value="parameter">{t('assignments.assigneeParameter')}</option>
-                <option value="manager">{t('assignments.assigneeManager')}</option>
-              </select>
-            </div>
-
-            {/* Assignee field — changes based on assignee_type */}
-            {form.assignee_type === 'user' && (
-              <div>
-                <label className={labelClass}>{t('assignments.userId')} *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={form.assignee_user}
-                  onChange={e => setField('assignee_user', e.target.value)}
-                  placeholder={t('assignments.exampleNumber', { value: 3 })}
-                  className={inputClass}
-                />
-                {errors.assignee_user && <p className={errorClass}>{errors.assignee_user}</p>}
-              </div>
-            )}
-
-            {form.assignee_type === 'group' && (
-              <div>
-                <label className={labelClass}>{t('assignments.groupId')} *</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={form.assignee_group}
-                  onChange={e => setField('assignee_group', e.target.value)}
-                  placeholder={t('assignments.exampleNumber', { value: 2 })}
-                  className={inputClass}
-                />
-                {errors.assignee_group && <p className={errorClass}>{errors.assignee_group}</p>}
-              </div>
-            )}
-
-            {form.assignee_type === 'parameter' && (
-              <div>
-                <label className={labelClass}>{t('assignments.parameterName')} *</label>
-                <input
-                  type="text"
-                  value={form.assignee_parameter}
-                  onChange={e => setField('assignee_parameter', e.target.value)}
-                  placeholder={t('assignments.exampleParameter')}
-                  className={inputClass}
-                />
-                {errors.assignee_parameter && <p className={errorClass}>{errors.assignee_parameter}</p>}
-              </div>
-            )}
-
-            {form.assignee_type === 'manager' && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-                {t('assignments.managerRuntime')}
-              </p>
-            )}
-
-            {/* Flags */}
-            <div className="flex flex-col gap-3 pt-1">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={form.is_exclusive}
-                  onChange={e => setField('is_exclusive', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {t('assignments.exclusive')}{' '}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                    ({t('assignments.exclusiveNote')})
-                  </span>
-                </span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={form.auto_notify}
-                  onChange={e => setField('auto_notify', e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  {t('assignments.autoNotify')}{' '}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                    ({t('assignments.autoNotifyNote')})
-                  </span>
-                </span>
-              </label>
-            </div>
-          </form>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              >
-                {t('common.cancel')}
-              </button>
-            </Dialog.Close>
-            <button
-              type="submit"
-              form="create-assignment-form"
-              disabled={createMutation.isPending}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {createMutation.isPending ? (
-                <>
-                  <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  {t('common.creating')}
-                </>
-              ) : (
-                <>
-                  <Plus size={16} />
-                  {t('assignments.new')}
-                </>
-              )}
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Form.Item name="is_exclusive" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <SwitchLabel
+              title={t('assignments.exclusive')}
+              note={t('assignments.exclusiveNote')}
+            />
+          </Form.Item>
+          <Form.Item name="auto_notify" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <SwitchLabel
+              title={t('assignments.autoNotify')}
+              note={t('assignments.autoNotifyNote')}
+            />
+          </Form.Item>
+        </Space>
+      </Form>
+    </Modal>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main Page
-// ---------------------------------------------------------------------------
+function buildCreatePayload(values: CreateFormValues) {
+  const payload: Parameters<ReturnType<typeof useCreateAssignment>['mutate']>[0] = {
+    assignment_type: values.assignment_type,
+    assignee_type: values.assignee_type,
+    is_exclusive: values.is_exclusive,
+    auto_notify: values.auto_notify,
+  }
+
+  if (values.assignment_type === 'template') payload.checklist_template = Number(values.checklist_template)
+  if (values.assignment_type === 'item') payload.checklist_item = Number(values.checklist_item)
+  if (values.assignment_type === 'runtime') payload.checklist_instance = Number(values.checklist_instance)
+
+  if (values.assignee_type === 'user') payload.assignee_user = Number(values.assignee_user)
+  if (values.assignee_type === 'group') payload.assignee_group = Number(values.assignee_group)
+  if (values.assignee_type === 'parameter') payload.assignee_parameter = values.assignee_parameter.trim()
+  return payload
+}
+
+function localizedOptions<T extends string>(options: Array<[T, MessageKey]>, t: (key: MessageKey) => string) {
+  return options.map(([value, labelKey]) => ({ value, label: t(labelKey) }))
+}
+
+function TargetField({ assignmentType }: { assignmentType: Assignment['assignment_type'] }) {
+  const { t } = useI18n()
+  if (assignmentType === 'item') {
+    return <NumberField name="checklist_item" label={t('assignments.targetItemId')} message={t('assignments.validationItemRequired')} example={7} />
+  }
+  if (assignmentType === 'runtime') {
+    return <NumberField name="checklist_instance" label={t('assignments.targetInstanceId')} message={t('assignments.validationInstanceRequired')} example={15} />
+  }
+  return <NumberField name="checklist_template" label={t('assignments.targetTemplateId')} message={t('assignments.validationTemplateRequired')} example={42} />
+}
+
+function AssigneeField({ assigneeType }: { assigneeType: Assignment['assignee_type'] }) {
+  const { t } = useI18n()
+  if (assigneeType === 'group') {
+    return <NumberField name="assignee_group" label={t('assignments.groupId')} message={t('assignments.validationGroupRequired')} example={2} />
+  }
+  if (assigneeType === 'parameter') {
+    return <ParameterField />
+  }
+  if (assigneeType === 'manager') {
+    return <Alert type="info" showIcon message={t('assignments.managerRuntime')} />
+  }
+  return <NumberField name="assignee_user" label={t('assignments.userId')} message={t('assignments.validationUserRequired')} example={3} />
+}
+
+interface NumberFieldProps {
+  name: keyof CreateFormValues
+  label: string
+  message: string
+  example: number
+}
+
+function NumberField({ name, label, message, example }: NumberFieldProps) {
+  const { t } = useI18n()
+  return (
+    <Form.Item name={name} label={label} rules={numericRule(message)} required>
+      <InputNumber
+        min={MIN_ID}
+        placeholder={t('assignments.exampleNumber', { value: example })}
+        style={{ width: '100%' }}
+      />
+    </Form.Item>
+  )
+}
+
+function ParameterField() {
+  const { t } = useI18n()
+  return (
+    <Form.Item
+      name="assignee_parameter"
+      label={t('assignments.parameterName')}
+      rules={textRule(t('assignments.validationParameterRequired'))}
+      required
+    >
+      <Input placeholder={t('assignments.exampleParameter')} />
+    </Form.Item>
+  )
+}
+
+interface SwitchLabelProps {
+  title: string
+  note: string
+  checked?: boolean
+  onChange?: (checked: boolean) => void
+}
+
+function SwitchLabel({ title, note, checked, onChange }: SwitchLabelProps) {
+  return (
+    <Space align="start">
+      <Switch aria-label={title} checked={checked} onChange={onChange} />
+      <span>
+        {title}{' '}
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          ({note})
+        </Typography.Text>
+      </span>
+    </Space>
+  )
+}
 
 export function AssignmentsPage() {
   const { t } = useI18n()
@@ -454,262 +275,226 @@ export function AssignmentsPage() {
   const [assignmentTypeFilter, setAssignmentTypeFilter] = useState<AssignmentTypeFilter>('')
   const [assigneeTypeFilter, setAssigneeTypeFilter] = useState<AssigneeTypeFilter>('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [confirmState, setConfirmState] = useState<{
-    open: boolean
-    title: string
-    description: string
-    onConfirm: () => void
-  }>({ open: false, title: '', description: '', onConfirm: () => {} })
 
-  const { data, isLoading } = useAssignments({
+  const { data, isError, isLoading } = useAssignments({
     search: search || undefined,
     assignment_type: assignmentTypeFilter || undefined,
     assignee_type: assigneeTypeFilter || undefined,
   })
-
   const deleteMutation = useDeleteAssignment()
-
   const assignments: Assignment[] = Array.isArray(data) ? data : (data?.items ?? [])
   const hasFilters = Boolean(search || assignmentTypeFilter || assigneeTypeFilter)
+  const resultCount = getResultCount(data, assignments.length)
 
-  const handleDeleteClick = (assignment: Assignment) => {
-    setConfirmState({
-      open: true,
-      title: t('assignments.deleteTitle'),
-      description: t('assignments.deleteConfirm', {
-        target: assignment.target_display || '—',
-        assignee: assignment.assignee_display || '—',
-      }),
-      onConfirm: () => {
-        deleteMutation.mutate(assignment.id, {
-          onSuccess: () => {
-            toast({ title: t('assignments.deleted'), variant: 'default' })
-          },
-          onError: () => {
-            toast({ title: t('assignments.deleteFailed'), variant: 'destructive' })
-          },
-        })
-      },
+  const handleDelete = (assignment: Assignment) => {
+    deleteMutation.mutate(assignment.id, {
+      onSuccess: () => toast({ title: t('assignments.deleted'), variant: 'default' }),
+      onError: () => toast({ title: t('assignments.deleteFailed'), variant: 'destructive' }),
     })
   }
 
-  const selectClass =
-    'pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer'
+  const columns: TableColumnsType<Assignment> = [
+    {
+      title: t('assignments.target'),
+      dataIndex: 'target_display',
+      render: (value: string) => <EllipsisText strong value={value} />,
+    },
+    {
+      title: t('assignments.assignee'),
+      dataIndex: 'assignee_display',
+      render: (value: string) => <EllipsisText value={value} />,
+    },
+    {
+      title: t('assignments.assignmentType'),
+      dataIndex: 'assignment_type',
+      render: (value: Assignment['assignment_type']) => (
+        <Tag color={assignmentTagColors[value]}>{t(assignmentTypeLabels[value])}</Tag>
+      ),
+    },
+    {
+      title: t('assignments.assigneeType'),
+      dataIndex: 'assignee_type',
+      render: (value: Assignment['assignee_type']) => (
+        <Tag color={assigneeTagColors[value]}>{t(assigneeTypeLabels[value])}</Tag>
+      ),
+    },
+    {
+      title: t('assignments.exclusive'),
+      dataIndex: 'is_exclusive',
+      render: (value: boolean) => <BooleanTag active={value} activeColor="red" />,
+    },
+    {
+      title: t('assignments.notify'),
+      dataIndex: 'auto_notify',
+      render: (value: boolean) => <BooleanTag active={value} activeColor="green" onOff />,
+    },
+    {
+      title: t('common.actions'),
+      key: 'actions',
+      align: 'right',
+      render: (_, assignment) => (
+        <DeleteAction
+          assignment={assignment}
+          loading={deleteMutation.isPending}
+          onConfirm={handleDelete}
+        />
+      ),
+    },
+  ]
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('assignments.title')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            {t('assignments.subtitle')}
-          </p>
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Card>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Typography.Title level={2} style={{ margin: 0 }}>
+              {t('assignments.title')}
+            </Typography.Title>
+            <Typography.Paragraph type="secondary" style={{ margin: '4px 0 0' }}>
+              {t('assignments.subtitle')}
+            </Typography.Paragraph>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowCreateModal(true)}>
+            {t('assignments.new')}
+          </Button>
         </div>
+      </Card>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px] self-start sm:self-auto"
-        >
-          <Plus size={18} />
-          {t('assignments.new')}
-        </button>
-      </div>
-
-      {/* Filter / search bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      <Card>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <AssignmentFilters
+            search={search}
+            assignmentType={assignmentTypeFilter}
+            assigneeType={assigneeTypeFilter}
+            onSearchChange={setSearch}
+            onAssignmentTypeChange={setAssignmentTypeFilter}
+            onAssigneeTypeChange={setAssigneeTypeFilter}
           />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t('assignments.search')}
-            className="pl-9 pr-4 py-2 text-sm w-full border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+          {!isLoading && data ? <ResultCount count={resultCount} /> : null}
+          {isError ? <Alert type="error" showIcon message={t('common.failedRefresh')} /> : null}
+          {isLoading ? (
+            <Skeleton active paragraph={{ rows: 8 }} />
+          ) : (
+            <Table
+              rowKey="id"
+              columns={columns}
+              dataSource={assignments}
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              locale={{ emptyText: <AssignmentsEmpty hasFilters={hasFilters} /> }}
+            />
+          )}
+        </Space>
+      </Card>
 
-        {/* Assignment type filter */}
-        <div className="relative flex items-center">
-          <Filter
-            size={14}
-            className="absolute left-3 text-gray-400 pointer-events-none"
-          />
-          <select
-            value={assignmentTypeFilter}
-            onChange={e => setAssignmentTypeFilter(e.target.value as AssignmentTypeFilter)}
-            className={`${selectClass} pl-8`}
-          >
-            <option value="">{t('assignments.allTypes')}</option>
-            <option value="template">{t('assignments.typeTemplate')}</option>
-            <option value="item">{t('assignments.typeItem')}</option>
-            <option value="runtime">{t('assignments.typeRuntime')}</option>
-          </select>
-        </div>
-
-        {/* Assignee type filter */}
-        <div className="relative flex items-center">
-          <UserCheck
-            size={14}
-            className="absolute left-3 text-gray-400 pointer-events-none"
-          />
-          <select
-            value={assigneeTypeFilter}
-            onChange={e => setAssigneeTypeFilter(e.target.value as AssigneeTypeFilter)}
-            className={`${selectClass} pl-8`}
-          >
-            <option value="">{t('assignments.allAssignees')}</option>
-            <option value="user">{t('assignments.assigneeUser')}</option>
-            <option value="group">{t('assignments.assigneeGroup')}</option>
-            <option value="parameter">{t('assignments.assigneeParameter')}</option>
-            <option value="manager">{t('assignments.assigneeManager')}</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Result count pill */}
-      {!isLoading && data && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {t('assignments.found', {
-            count: data.total ?? data.count ?? assignments.length,
-            label: (data.total ?? data.count ?? assignments.length) === 1
-              ? t('assignments.assignmentSingular')
-              : t('assignments.assignmentPlural'),
-          })}
-        </p>
-      )}
-
-      {/* Table */}
-      {isLoading ? (
-        <TableSkeleton />
-      ) : assignments.length === 0 ? (
-        <EmptyState hasFilters={hasFilters} />
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.target')}
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.assignee')}
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.assignmentType')}
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.assigneeType')}
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.exclusive')}
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('assignments.notify')}
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {t('common.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map(assignment => (
-                <tr
-                  key={assignment.id}
-                  className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
-                >
-                  {/* Target */}
-                  <td className="px-4 py-3">
-                    <span
-                      className="font-medium text-gray-900 dark:text-white truncate max-w-[200px] block"
-                      title={assignment.target_display}
-                    >
-                      {assignment.target_display || '—'}
-                    </span>
-                  </td>
-
-                  {/* Assignee */}
-                  <td className="px-4 py-3">
-                    <span
-                      className="text-gray-700 dark:text-gray-300 truncate max-w-[180px] block"
-                      title={assignment.assignee_display}
-                    >
-                      {assignment.assignee_display || '—'}
-                    </span>
-                  </td>
-
-                  {/* Assignment type badge */}
-                  <td className="px-4 py-3">
-                    <Badge
-                      label={t(ASSIGNMENT_TYPE_LABEL_KEYS[assignment.assignment_type])}
-                      colorClass={ASSIGNMENT_TYPE_COLORS[assignment.assignment_type]}
-                    />
-                  </td>
-
-                  {/* Assignee type badge */}
-                  <td className="px-4 py-3">
-                    <Badge
-                      label={t(ASSIGNEE_TYPE_LABEL_KEYS[assignment.assignee_type])}
-                      colorClass={ASSIGNEE_TYPE_COLORS[assignment.assignee_type]}
-                    />
-                  </td>
-
-                  {/* Exclusive */}
-                  <td className="px-4 py-3">
-                    {assignment.is_exclusive ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                        {t('common.yes')}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs">{t('common.no')}</span>
-                    )}
-                  </td>
-
-                  {/* Auto-notify */}
-                  <td className="px-4 py-3">
-                    {assignment.auto_notify ? (
-                      <span className="text-green-600 dark:text-green-400 text-xs font-medium">{t('common.on')}</span>
-                    ) : (
-                      <span className="text-gray-400 dark:text-gray-500 text-xs">{t('common.off')}</span>
-                    )}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleDeleteClick(assignment)}
-                      disabled={deleteMutation.isPending}
-                      title={t('assignments.deleteTitle')}
-                      className="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors disabled:opacity-40"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Create modal */}
       <CreateAssignmentModal open={showCreateModal} onOpenChange={setShowCreateModal} />
+    </Space>
+  )
+}
 
-      {/* Delete confirm dialog */}
-      <ConfirmDialog
-        open={confirmState.open}
-        onOpenChange={open => setConfirmState(prev => ({ ...prev, open }))}
-        title={confirmState.title}
-        description={confirmState.description}
-        confirmLabel={t('common.delete')}
-        variant="destructive"
-        onConfirm={confirmState.onConfirm}
+interface FilterProps {
+  search: string
+  assignmentType: AssignmentTypeFilter
+  assigneeType: AssigneeTypeFilter
+  onSearchChange: (value: string) => void
+  onAssignmentTypeChange: (value: AssignmentTypeFilter) => void
+  onAssigneeTypeChange: (value: AssigneeTypeFilter) => void
+}
+
+function AssignmentFilters(props: FilterProps) {
+  const { t } = useI18n()
+  return (
+    <Space wrap style={{ width: '100%' }}>
+      <Input
+        aria-label={t('assignments.search')}
+        value={props.search}
+        prefix={<SearchOutlined />}
+        placeholder={t('assignments.search')}
+        onChange={event => props.onSearchChange(event.target.value)}
+        style={{ minWidth: 260 }}
       />
-    </div>
+      <Select
+        aria-label={t('assignments.assignmentType')}
+        value={props.assignmentType || undefined}
+        allowClear
+        placeholder={t('assignments.allTypes')}
+        suffixIcon={<FilterOutlined />}
+        options={localizedOptions(assignmentTypeOptions, t)}
+        onChange={value => props.onAssignmentTypeChange((value ?? '') as AssignmentTypeFilter)}
+        style={{ minWidth: 180 }}
+      />
+      <Select
+        aria-label={t('assignments.assigneeType')}
+        value={props.assigneeType || undefined}
+        allowClear
+        placeholder={t('assignments.allAssignees')}
+        suffixIcon={<UserSwitchOutlined />}
+        options={localizedOptions(assigneeTypeOptions, t)}
+        onChange={value => props.onAssigneeTypeChange((value ?? '') as AssigneeTypeFilter)}
+        style={{ minWidth: 190 }}
+      />
+    </Space>
+  )
+}
+
+function ResultCount({ count }: { count: number }) {
+  const { t } = useI18n()
+  const label = count === 1 ? t('assignments.assignmentSingular') : t('assignments.assignmentPlural')
+  return <Typography.Text type="secondary">{t('assignments.found', { count, label })}</Typography.Text>
+}
+
+function AssignmentsEmpty({ hasFilters }: { hasFilters: boolean }) {
+  const { t } = useI18n()
+  return (
+    <Empty
+      description={hasFilters ? t('assignments.noMatch') : t('assignments.noAssignments')}
+    >
+      <Typography.Text type="secondary">
+        {hasFilters ? t('assignments.adjustFilters') : t('assignments.createFirst')}
+      </Typography.Text>
+    </Empty>
+  )
+}
+
+function EllipsisText({ value, strong = false }: { value?: string | null; strong?: boolean }) {
+  const text = displayValue(value)
+  return <Typography.Text strong={strong} ellipsis={{ tooltip: text }}>{text}</Typography.Text>
+}
+
+function BooleanTag({ active, activeColor, onOff = false }: { active: boolean; activeColor: string; onOff?: boolean }) {
+  const { t } = useI18n()
+  const label = onOff ? (active ? t('common.on') : t('common.off')) : (active ? t('common.yes') : t('common.no'))
+  return <Tag color={active ? activeColor : 'default'}>{label}</Tag>
+}
+
+interface DeleteActionProps {
+  assignment: Assignment
+  loading: boolean
+  onConfirm: (assignment: Assignment) => void
+}
+
+function DeleteAction({ assignment, loading, onConfirm }: DeleteActionProps) {
+  const { t } = useI18n()
+  return (
+    <Popconfirm
+      title={t('assignments.deleteTitle')}
+      description={t('assignments.deleteConfirm', {
+        target: displayValue(assignment.target_display),
+        assignee: displayValue(assignment.assignee_display),
+      })}
+      okText={t('common.delete')}
+      cancelText={t('common.cancel')}
+      okButtonProps={{ danger: true, loading }}
+      onConfirm={() => onConfirm(assignment)}
+    >
+      <Button
+        danger
+        type="text"
+        aria-label={t('assignments.deleteTitle')}
+        disabled={loading}
+        icon={<DeleteOutlined />}
+      />
+    </Popconfirm>
   )
 }
 

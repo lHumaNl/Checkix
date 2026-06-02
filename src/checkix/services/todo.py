@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -397,12 +397,12 @@ class TodoService:
         await db.flush()
 
         # Return items in the new order
-        result = await db.execute(
+        updated_result = await db.execute(
             select(TodoItem)
             .where(TodoItem.id.in_(ordered_ids))
             .order_by(TodoItem.order)
         )
-        return result.scalars().all()
+        return cast(Sequence[TodoItem], updated_result.scalars().all())
 
     # ------------------------------------------------------------------
     # Duplication

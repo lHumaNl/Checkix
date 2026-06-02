@@ -9,10 +9,10 @@ test.describe('Login Page', () => {
   })
 
   test('renders login form correctly', async ({ page }) => {
-    await expect(page.locator('h2:has-text("Checkix")')).toBeVisible()
-    await expect(page.locator('#username')).toBeVisible()
-    await expect(page.locator('#password')).toBeVisible()
-    await expect(page.locator('button[type="submit"]')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Checkix' })).toBeVisible()
+    await expect(page.getByLabel('Username')).toBeVisible()
+    await expect(page.getByLabel('Password')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
     await expect(page.getByText('Sign in to your account')).toBeVisible()
   })
 
@@ -22,11 +22,12 @@ test.describe('Login Page', () => {
       route.continue()
     })
 
-    await page.locator('#username').fill('testuser')
-    await page.locator('#password').fill('password')
-    await page.locator('button[type="submit"]').click()
+    await page.getByLabel('Username').fill('testuser')
+    await page.getByLabel('Password').fill('password')
+    const submitButton = page.getByRole('button', { name: 'Sign in' })
+    await submitButton.click()
 
-    await expect(page.locator('button[type="submit"]')).toBeDisabled()
+    await expect(submitButton).toHaveClass(/ant-btn-loading/)
   })
 
   test('redirects to dashboard on valid credentials', async ({ page, authPage }) => {
@@ -50,28 +51,28 @@ test.describe('Login Page', () => {
       })
     })
 
-    await page.locator('#username').fill('testuser')
-    await page.locator('#password').fill('wrongpass')
-    await page.locator('button[type="submit"]').click()
+    await page.getByLabel('Username').fill('testuser')
+    await page.getByLabel('Password').fill('wrongpass')
+    await page.getByRole('button', { name: 'Sign in' }).click()
 
-    await expect(page.locator('.bg-red-50, .bg-red-900\\/50')).toContainText('Invalid credentials')
+    await expect(page.getByRole('alert')).toContainText('Invalid credentials')
   })
 
   test('shows generic error on network failure', async ({ page }) => {
     await page.route('**/api/auth/token/', (route) => route.abort('failed'))
 
-    await page.locator('#username').fill('testuser')
-    await page.locator('#password').fill('password')
-    await page.locator('button[type="submit"]').click()
+    await page.getByLabel('Username').fill('testuser')
+    await page.getByLabel('Password').fill('password')
+    await page.getByRole('button', { name: 'Sign in' }).click()
 
-    await expect(page.locator('.bg-red-50, .bg-red-900\\/50')).toContainText(/failed|error/i)
+    await expect(page.getByRole('alert')).toContainText(/failed|error/i)
   })
 
-  test('prevents submit with empty fields via HTML required', async ({ page }) => {
-    // HTML required attribute prevents form submission
-    // Verify the fields have the required attribute
-    await expect(page.locator('#username')).toHaveAttribute('required', '')
-    await expect(page.locator('#password')).toHaveAttribute('required', '')
+  test('validates empty required fields', async ({ page }) => {
+    await page.getByRole('button', { name: 'Sign in' }).click()
+
+    await expect(page.getByText('Username is required')).toBeVisible()
+    await expect(page.getByText('Password is required')).toBeVisible()
   })
 
   test('submit button is disabled while loading', async ({ page }) => {
@@ -84,11 +85,12 @@ test.describe('Login Page', () => {
       })
     })
 
-    await page.locator('#username').fill('testuser')
-    await page.locator('#password').fill('password')
-    await page.locator('button[type="submit"]').click()
+    await page.getByLabel('Username').fill('testuser')
+    await page.getByLabel('Password').fill('password')
+    const submitButton = page.getByRole('button', { name: 'Sign in' })
+    await submitButton.click()
 
-    await expect(page.locator('button[type="submit"]')).toBeDisabled()
+    await expect(submitButton).toHaveClass(/ant-btn-loading/)
   })
 
   test('theme toggle cycles through modes', async ({ page }) => {

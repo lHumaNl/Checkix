@@ -164,6 +164,7 @@ export function ChecklistDetailPage() {
           </button>
 
           <button
+            aria-label={t('common.edit')}
             onClick={() => setShowEditModal(true)}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500"
           >
@@ -172,7 +173,7 @@ export function ChecklistDetailPage() {
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500">
+              <button aria-label={t('common.actions')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-500">
                 <MoreVertical size={20} />
               </button>
             </DropdownMenu.Trigger>

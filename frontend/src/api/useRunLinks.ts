@@ -104,7 +104,7 @@ export function useRunLinkPublicInfo(uniqueId: string) {
 
 export interface ExecuteRunLinkResult {
   message: string
-  instance_id: string
+  detail?: string | null
 }
 
 export function useExecuteRunLink() {

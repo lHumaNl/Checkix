@@ -86,7 +86,7 @@ export function useBulkDeleteChecklists() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (ids: number[]) => {
-      await client.post('/checklists/bulk_delete/', { ids })
+      await Promise.all(ids.map((id) => client.delete(`/checklists/${id}`)))
       return ids
     },
     onMutate: async (ids) => {
@@ -117,21 +117,8 @@ export function useMoveChecklistsToFolder() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ ids, folder_id }: { ids: number[]; folder_id: number | null }) => {
-      await client.post('/checklists/bulk_move_folder/', { ids, folder_id })
+      await Promise.all(ids.map((id) => client.put(`/checklists/${id}`, { folder_id })))
       return { ids, folder_id }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['checklists'] })
-    },
-  })
-}
-
-export function useAddTagsToChecklists() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ ids, tags }: { ids: number[]; tags: string[] }) => {
-      await client.post('/checklists/bulk_assign_tags/', { ids, tag_names: tags })
-      return { ids, tags }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checklists'] })

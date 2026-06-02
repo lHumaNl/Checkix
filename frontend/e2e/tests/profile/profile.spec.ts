@@ -16,22 +16,18 @@ test.describe('Profile Page', () => {
   })
 
   test('shows avatar with initials', async ({ page }) => {
-    // Avatar is a div with initials, bg-blue-600 or similar
-    const avatar = page.locator('.bg-blue-600, .bg-indigo-600').filter({ hasText: /[A-Z]/ })
+    const avatar = page.locator('main .ant-avatar').filter({ hasText: /^[A-Z]{1,2}$/ })
     await expect(avatar.first()).toBeVisible()
   })
 
-  test('has editable name fields', async ({ page }) => {
-    const firstName = page.locator('input[name="first_name"]')
-    const lastName = page.locator('input[name="last_name"]')
-
-    await expect(firstName).toBeVisible()
-    await expect(lastName).toBeVisible()
+  test('has editable work and locale fields', async ({ page }) => {
+    await expect(page.getByRole('textbox', { name: 'Department' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Employee ID' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Timezone' })).toBeVisible()
   })
 
   test('saves profile changes', async ({ page }) => {
-    const firstName = page.locator('input[name="first_name"]')
-    await firstName.fill('TestName')
+    await page.getByRole('textbox', { name: 'Department' }).fill('Engineering')
 
     await page.getByRole('button', { name: /save/i }).click()
 

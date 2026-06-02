@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -51,21 +50,19 @@ async def folder_tree(
     )
     all_folders = list(result.scalars().all())
 
-    # Build tree from flat list using plain dicts for reliable serialization
-    nodes: dict[int, dict] = {}
+    nodes: dict[int, FolderTreeOut] = {}
     for folder in all_folders:
-        nodes[folder.id] = {
-            "id": folder.id,
-            "name": folder.name,
-            "parent_id": folder.parent_id,
-            "icon": folder.icon,
-            "order": folder.order,
-            "children": [],
-            "created_at": folder.created_at.isoformat() if folder.created_at else None,
-            "updated_at": folder.updated_at.isoformat() if folder.updated_at else None,
-        }
+        nodes[folder.id] = FolderTreeOut(
+            id=folder.id,
+            name=folder.name,
+            user_id=folder.user_id,
+            parent_id=folder.parent_id,
+            icon=folder.icon,
+            order=folder.order,
+            children=[],
+        )
 
-    roots: list[dict] = []
+    roots: list[FolderTreeOut] = []
     for folder in all_folders:
         node = nodes[folder.id]
         if folder.parent_id is None:
@@ -73,7 +70,7 @@ async def folder_tree(
         else:
             parent_node = nodes.get(folder.parent_id)
             if parent_node is not None:
-                parent_node["children"].append(node)
+                parent_node.children.append(node)
             else:
                 # Orphaned folder (parent was deleted) -- treat as root
                 roots.append(node)

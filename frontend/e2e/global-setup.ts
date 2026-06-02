@@ -9,9 +9,9 @@ async function globalSetup(config: FullConfig) {
   const page = await browser.newPage()
 
   await page.goto(`${baseURL}/login`)
-  await page.locator('#username').fill('admin')
-  await page.locator('#password').fill('1')
-  await page.locator('button[type="submit"]').click()
+  await page.getByLabel('Username').fill('admin')
+  await page.getByLabel('Password').fill('1')
+  await page.getByRole('button', { name: 'Sign in' }).click()
 
   // Wait for redirect away from login
   await page.waitForURL(/^(?!.*\/login)/, { timeout: 15_000 })

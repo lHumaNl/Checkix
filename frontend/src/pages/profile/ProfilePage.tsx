@@ -1,131 +1,165 @@
-import { useState } from 'react'
-import { User, Mail, Building2, IdCard, Globe, Save, Clock } from 'lucide-react'
+import {
+  Alert,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Divider,
+  Form,
+  Input,
+  Row,
+  Select,
+  Skeleton,
+  Space,
+  Tag,
+  Typography,
+} from 'antd'
+import { Building2, Clock, Globe, IdCard, Mail, Save } from 'lucide-react'
 import { useProfile, useUpdateProfile } from '@/api/useProfile'
-import type { UserMeUpdate } from '@/api/useProfile'
+import type { UserMe } from '@/api/useProfile'
 import { toast } from '@/hooks/useToast'
-import { useI18n } from '@/i18n'
+import { languageOptions, useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
+import { buildUpdatePayload, type ProfileFormValues } from './profilePayload'
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
+const { Text, Title } = Typography
+const CARD_BODY_STYLE = { padding: 24 }
+
+type Translate = (key: MessageKey, values?: Record<string, string | number>) => string
+
+interface ProfileFormProps {
+  initialValues: ProfileFormValues
+  isSaving: boolean
+  onSubmit: (values: ProfileFormValues) => void
+  profile: UserMe
+  t: Translate
+}
 
 function ProfileSkeleton() {
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-pulse">
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center gap-5">
-          <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
-          <div className="space-y-2 flex-1">
-            <div className="h-6 w-48 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-4 w-40 rounded bg-gray-200 dark:bg-gray-700" />
-          </div>
-        </div>
-      </div>
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="space-y-1.5">
-            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700" />
-            <div className="h-10 w-full rounded-lg bg-gray-200 dark:bg-gray-700" />
-          </div>
-        ))}
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <Card styles={{ body: CARD_BODY_STYLE }}>
+        <Skeleton active avatar={{ size: 80 }} paragraph={{ rows: 2 }} />
+      </Card>
+      <Card styles={{ body: CARD_BODY_STYLE }}>
+        <Skeleton active paragraph={{ rows: 8 }} title />
+      </Card>
     </div>
   )
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ firstName, lastName, username }: { firstName: string; lastName: string; username: string }) {
-  const initials = (() => {
-    const f = firstName.trim()
-    const l = lastName.trim()
-    if (f && l) return `${f[0]}${l[0]}`.toUpperCase()
-    if (f) return f.slice(0, 2).toUpperCase()
-    return username.slice(0, 2).toUpperCase()
-  })()
+function ProfileSummary({ memberSince, profile, t }: { memberSince: string; profile: UserMe; t: Translate }) {
+  const displayName = getDisplayName(profile)
 
   return (
-    <div className="w-20 h-20 rounded-full bg-blue-600 dark:bg-blue-500 flex items-center justify-center shrink-0">
-      <span className="text-2xl font-bold text-white">{initials}</span>
-    </div>
+    <Card styles={{ body: CARD_BODY_STYLE }}>
+      <Space align="center" size={20}>
+        <Avatar size={80} style={{ backgroundColor: '#2563eb', fontWeight: 700 }}>
+          {getInitials(profile)}
+        </Avatar>
+        <Space direction="vertical" size={4} className="min-w-0">
+          <Title level={4} style={{ margin: 0 }} ellipsis>
+            {displayName}
+          </Title>
+          <Text type="secondary">@{profile.username}</Text>
+          <Space size={6} wrap>
+            <Clock size={12} />
+            <Text type="secondary">{t('profile.memberSince', { date: memberSince })}</Text>
+          </Space>
+          {profile.profile?.department && (
+            <Tag color="blue" icon={<Building2 size={12} />}>
+              {profile.profile.department}
+            </Tag>
+          )}
+        </Space>
+      </Space>
+    </Card>
   )
 }
 
-// ─── Field ───────────────────────────────────────────────────────────────────
-
-interface FieldProps {
-  label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  children: React.ReactNode
-}
-
-function Field({ label, icon: Icon, children }: FieldProps) {
+function ProfileForm({ initialValues, isSaving, onSubmit, profile, t }: ProfileFormProps) {
   return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-        <Icon size={14} className="text-gray-400 dark:text-gray-500" />
-        {label}
-      </label>
-      {children}
-    </div>
+    <Card styles={{ body: CARD_BODY_STYLE }}>
+      <Form layout="vertical" requiredMark={false} initialValues={initialValues} onFinish={onSubmit}>
+        <Title level={5}>{t('profile.personalInfo')}</Title>
+        <Form.Item label={t('profile.email')} extra={t('profile.contactAdminEmail')}>
+          <Input prefix={<Mail size={16} />} readOnly title={t('profile.emailLocked')} value={profile.email} />
+        </Form.Item>
+
+        <Divider />
+        <Title level={5}>{t('profile.workDetails')}</Title>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item label={t('profile.department')} name="department">
+              <Input prefix={<Building2 size={16} />} placeholder={t('profile.departmentPlaceholder')} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label={t('profile.employeeId')} name="employee_id">
+              <Input prefix={<IdCard size={16} />} placeholder={t('profile.employeeIdPlaceholder')} />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Divider />
+        <Title level={5}>{t('profile.localeSettings')}</Title>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item label={t('profile.timezone')} name="timezone">
+              <Input prefix={<Globe size={16} />} placeholder={t('profile.timezonePlaceholder')} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label={t('common.language')} name="language">
+              <Select
+                allowClear
+                showSearch
+                placeholder={t('profile.languagePlaceholder')}
+                optionFilterProp="label"
+                options={languageOptions.map(({ code, label }) => ({ value: code, label }))}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+          <Button type="primary" htmlType="submit" icon={<Save size={16} />} loading={isSaving}>
+            {isSaving ? t('common.saving') : t('common.saveChanges')}
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
   )
 }
 
-const inputClass =
-  'w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors'
+function AccountDetails({ memberSince, profile, t }: { memberSince: string; profile: UserMe; t: Translate }) {
+  const items = [
+    { key: 'username', label: t('profile.username'), children: `@${profile.username}` },
+    { key: 'status', label: t('profile.accountStatus'), children: <StatusTag isActive={profile.is_active} t={t} /> },
+    { key: 'memberSince', label: t('profile.memberSince', { date: '' }).trim(), children: memberSince },
+    ...getLastLoginItem(profile, t),
+  ]
 
-const readonlyInputClass =
-  'w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-sm cursor-not-allowed'
+  return (
+    <Card title={t('profile.accountInfo')} styles={{ body: CARD_BODY_STYLE }}>
+      <Descriptions column={{ xs: 1, sm: 2 }} items={items} />
+    </Card>
+  )
+}
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+function StatusTag({ isActive, t }: { isActive: boolean; t: Translate }) {
+  return <Tag color={isActive ? 'success' : 'error'}>{isActive ? t('common.active') : t('common.inactive')}</Tag>
+}
 
 export function ProfilePage() {
   const { language, t } = useI18n()
   const { data: profile, isLoading, isError } = useProfile()
   const updateProfile = useUpdateProfile()
 
-  const [form, setForm] = useState<{
-    first_name: string
-    last_name: string
-    department: string
-    employee_id: string
-    timezone: string
-    language: string
-  } | null>(null)
-
-  const formValues = form ?? {
-    first_name: profile?.first_name ?? '',
-    last_name: profile?.last_name ?? '',
-    department: profile?.profile?.department ?? '',
-    employee_id: profile?.profile?.employee_id ?? '',
-    timezone: profile?.profile?.timezone ?? '',
-    language: profile?.profile?.language ?? '',
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = e.target
-    setForm(() => ({ ...formValues, [name]: value }))
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-
-    const payload: UserMeUpdate = {
-      first_name: formValues.first_name || undefined,
-      last_name: formValues.last_name || undefined,
-    }
-
-    const profileData: UserMeUpdate['profile'] = {}
-    if (formValues.department) profileData.department = formValues.department
-    if (formValues.employee_id) profileData.employee_id = formValues.employee_id
-    if (formValues.timezone) profileData.timezone = formValues.timezone
-    if (formValues.language) profileData.language = formValues.language
-
-    if (Object.keys(profileData).length > 0) {
-      payload.profile = profileData
-    }
-
+  const handleSubmit = async (values: ProfileFormValues) => {
     try {
-      await updateProfile.mutateAsync(payload)
+      await updateProfile.mutateAsync(buildUpdatePayload(values))
       toast({ title: t('profile.updated'), variant: 'default' })
     } catch {
       toast({ title: t('profile.updateFailed'), variant: 'destructive' })
@@ -133,220 +167,77 @@ export function ProfilePage() {
   }
 
   if (isLoading) return <ProfileSkeleton />
-
-  if (isError) {
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-          <p className="text-red-700 dark:text-red-400 font-medium">{t('profile.updateFailed')}</p>
-          <p className="text-red-500 dark:text-red-500 text-sm mt-1">{t('common.failedRefresh')}</p>
-        </div>
-      </div>
-    )
-  }
-
+  if (isError) return <ProfileError t={t} />
   if (!profile) return null
 
-  const displayName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username
-  const memberSince = profile.date_joined
-    ? new Date(profile.date_joined).toLocaleDateString(language, {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-    : t('common.notAvailable')
+  const memberSince = formatMemberSince(profile.date_joined, language, t)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('profile.title')}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t('profile.subtitle')}
-        </p>
-      </div>
-
-      {/* Identity card */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center gap-5">
-          <Avatar
-            firstName={profile.first_name}
-            lastName={profile.last_name}
-            username={profile.username}
-          />
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{displayName}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">@{profile.username}</p>
-            <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-              <Clock size={12} />
-              <span>{t('profile.memberSince', { date: memberSince })}</span>
-            </div>
-            {profile.profile?.department && (
-              <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 dark:text-blue-400">
-                <Building2 size={12} />
-                <span>{profile.profile.department}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Edit form */}
-      <form
+    <div className="mx-auto max-w-2xl space-y-6">
+      <PageHeader t={t} />
+      <ProfileSummary memberSince={memberSince} profile={profile} t={t} />
+      <ProfileForm
+        initialValues={buildFormValues(profile)}
+        isSaving={updateProfile.isPending}
         onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-5"
-      >
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.personalInfo')}</h3>
-
-        {/* Name row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label={t('profile.firstName')} icon={User}>
-            <input
-              type="text"
-              name="first_name"
-              value={formValues.first_name}
-              onChange={handleChange}
-              placeholder={t('profile.firstName')}
-              className={inputClass}
-            />
-          </Field>
-          <Field label={t('profile.lastName')} icon={User}>
-            <input
-              type="text"
-              name="last_name"
-              value={formValues.last_name}
-              onChange={handleChange}
-              placeholder={t('profile.lastName')}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-
-        {/* Email (readonly) */}
-        <Field label={t('profile.email')} icon={Mail}>
-          <input
-            type="email"
-            value={profile.email}
-            readOnly
-            className={readonlyInputClass}
-            title={t('profile.emailLocked')}
-          />
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {t('profile.contactAdminEmail')}
-          </p>
-        </Field>
-
-        <hr className="border-gray-100 dark:border-gray-700" />
-
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.workDetails')}</h3>
-
-        {/* Department & Employee ID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label={t('profile.department')} icon={Building2}>
-            <input
-              type="text"
-              name="department"
-              value={formValues.department}
-              onChange={handleChange}
-              placeholder={t('profile.departmentPlaceholder')}
-              className={inputClass}
-            />
-          </Field>
-          <Field label={t('profile.employeeId')} icon={IdCard}>
-            <input
-              type="text"
-              name="employee_id"
-              value={formValues.employee_id}
-              onChange={handleChange}
-              placeholder={t('profile.employeeIdPlaceholder')}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-
-        <hr className="border-gray-100 dark:border-gray-700" />
-
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.localeSettings')}</h3>
-
-        {/* Timezone & Language */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label={t('profile.timezone')} icon={Globe}>
-            <input
-              type="text"
-              name="timezone"
-              value={formValues.timezone}
-              onChange={handleChange}
-              placeholder={t('profile.timezonePlaceholder')}
-              className={inputClass}
-            />
-          </Field>
-          <Field label={t('common.language')} icon={Globe}>
-            <input
-              type="text"
-              name="language"
-              value={formValues.language}
-              onChange={handleChange}
-              placeholder={t('profile.languagePlaceholder')}
-              className={inputClass}
-            />
-          </Field>
-        </div>
-
-        {/* Submit */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={updateProfile.isPending}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-          >
-            <Save size={16} />
-            {updateProfile.isPending ? t('common.saving') : t('common.saveChanges')}
-          </button>
-        </div>
-      </form>
-
-      {/* Read-only account info */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-3">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-white">{t('profile.accountInfo')}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-gray-500 dark:text-gray-400">{t('profile.username')}</span>
-            <p className="text-gray-900 dark:text-white font-medium mt-0.5">@{profile.username}</p>
-          </div>
-          <div>
-            <span className="text-gray-500 dark:text-gray-400">{t('profile.accountStatus')}</span>
-            <p className="mt-0.5">
-              <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                  profile.is_active
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                }`}
-              >
-                {profile.is_active ? t('common.active') : t('common.inactive')}
-              </span>
-            </p>
-          </div>
-          <div>
-            <span className="text-gray-500 dark:text-gray-400">{t('profile.memberSince', { date: '' }).trim()}</span>
-            <p className="text-gray-900 dark:text-white font-medium mt-0.5">{memberSince}</p>
-          </div>
-          {profile.last_login && (
-            <div>
-              <span className="text-gray-500 dark:text-gray-400">{t('profile.lastLogin')}</span>
-              <p className="text-gray-900 dark:text-white font-medium mt-0.5">
-                {new Date(profile.last_login).toLocaleDateString(language, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+        profile={profile}
+        t={t}
+      />
+      <AccountDetails memberSince={memberSince} profile={profile} t={t} />
     </div>
   )
+}
+
+function PageHeader({ t }: { t: Translate }) {
+  return (
+    <div>
+      <Title level={2} style={{ marginBottom: 4 }}>
+        {t('profile.title')}
+      </Title>
+      <Text type="secondary">{t('profile.subtitle')}</Text>
+    </div>
+  )
+}
+
+function ProfileError({ t }: { t: Translate }) {
+  return (
+    <div className="mx-auto max-w-2xl">
+      <Alert type="error" showIcon message={t('profile.updateFailed')} description={t('common.failedRefresh')} />
+    </div>
+  )
+}
+
+function buildFormValues(profile: UserMe): ProfileFormValues {
+  return {
+    department: profile.profile?.department ?? '',
+    employee_id: profile.profile?.employee_id ?? '',
+    timezone: profile.profile?.timezone ?? '',
+    language: profile.profile?.language || undefined,
+  }
+}
+
+function getDisplayName(profile: UserMe) {
+  return [profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username
+}
+
+function getInitials(profile: UserMe) {
+  const firstName = profile.first_name.trim()
+  const lastName = profile.last_name.trim()
+  if (firstName && lastName) return `${firstName[0]}${lastName[0]}`.toUpperCase()
+  if (firstName) return firstName.slice(0, 2).toUpperCase()
+  return profile.username.slice(0, 2).toUpperCase()
+}
+
+function formatMemberSince(date: string | null, language: string, t: Translate) {
+  if (!date) return t('common.notAvailable')
+  return new Date(date).toLocaleDateString(language, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+function getLastLoginItem(profile: UserMe, t: Translate) {
+  if (!profile.last_login) return []
+  return [{ key: 'lastLogin', label: t('profile.lastLogin'), children: new Date(profile.last_login).toLocaleString() }]
 }

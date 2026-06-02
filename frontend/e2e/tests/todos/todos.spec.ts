@@ -39,12 +39,14 @@ test.describe('Todos Page', () => {
   })
 
   test('filters by status', async ({ page }) => {
-    // Status filter is a select/dropdown
-    const statusFilter = page.locator('select').first()
-    if (await statusFilter.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await statusFilter.selectOption('active')
-      await page.waitForTimeout(500)
-    }
+    await page.locator('main .ant-select').click()
+    const activeOption = page
+      .locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option')
+      .filter({ hasText: 'Active' })
+      .first()
+    await expect(activeOption).toBeVisible()
+    await activeOption.click()
+    await page.waitForTimeout(500)
   })
 
   test('expands a todo list to see items', async ({ page }) => {

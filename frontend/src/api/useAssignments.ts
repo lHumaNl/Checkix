@@ -45,11 +45,16 @@ export function useAssignments(
 }
 
 export interface CreateAssignmentPayload {
-  template_id: number
-  assignee_type?: string
-  assignee_id?: number
-  due_date?: string
-  notes?: string
+  assignment_type: Assignment['assignment_type']
+  checklist_template?: number | null
+  checklist_item?: number | null
+  checklist_instance?: number | null
+  assignee_type: Assignment['assignee_type']
+  assignee_user?: number | null
+  assignee_group?: number | null
+  assignee_parameter?: string | null
+  is_exclusive: boolean
+  auto_notify: boolean
 }
 
 export function useCreateAssignment() {

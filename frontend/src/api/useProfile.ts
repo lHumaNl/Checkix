@@ -27,17 +27,11 @@ export interface UserMe {
 }
 
 export interface UserMeUpdate {
-  first_name?: string
-  last_name?: string
-  email?: string
-  profile?: {
-    timezone?: string | null
-    language?: string | null
-    notification_preferences?: Record<string, unknown> | null
-    employee_id?: string | null
-    department?: string | null
-    manager?: number | null
-  }
+  timezone?: string | null
+  language?: string | null
+  notification_preferences?: Record<string, unknown> | null
+  employee_id?: string | null
+  department?: string | null
 }
 
 export function useProfile() {

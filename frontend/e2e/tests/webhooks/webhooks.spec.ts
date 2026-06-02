@@ -16,7 +16,7 @@ test.describe('Webhooks Page', () => {
 
   test('opens create webhook modal', async ({ page }) => {
     await page.getByRole('button', { name: /new webhook/i }).click()
-    await expect(page.getByRole('heading', { name: /New Webhook/i })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: /new webhook/i })).toBeVisible()
   })
 
   test('search input is present', async ({ page }) => {

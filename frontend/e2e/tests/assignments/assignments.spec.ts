@@ -16,7 +16,7 @@ test.describe('Assignments Page', () => {
 
   test('opens create assignment modal', async ({ page }) => {
     await page.getByRole('button', { name: /new assignment/i }).click()
-    await expect(page.getByRole('heading', { name: /new assignment/i })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: /new assignment/i })).toBeVisible()
   })
 
   test('search input is present', async ({ page }) => {

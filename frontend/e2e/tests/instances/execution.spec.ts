@@ -10,16 +10,16 @@ test.describe('Instance Execution', () => {
     await checklistsPage.goto()
 
     await page.getByRole('button', { name: 'New Checklist' }).click()
-    await page.locator('input[name="title"]').fill(name)
+    await page.getByRole('dialog').getByRole('textbox', { name: 'Checklist title' }).fill(name)
 
     // Set status to active
-    await page.locator('input[type="radio"][value="active"]').check()
+    await page.getByRole('dialog').getByText('Active', { exact: true }).click()
 
     for (let i = 0; i < itemCount; i++) {
       if (i > 0) {
         await page.getByRole('button', { name: 'Add Item' }).click()
       }
-      await page.locator(`input[name="items.${i}.content"]`).fill(`Item ${i + 1}`)
+      await page.getByRole('dialog').getByRole('textbox', { name: 'Item content' }).nth(i).fill(`Item ${i + 1}`)
     }
 
     await page.getByRole('button', { name: 'Create Checklist' }).click()

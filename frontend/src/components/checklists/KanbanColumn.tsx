@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { useDroppable } from '@dnd-kit/core'
+import { Badge, Button, Card, Empty, Space, Typography } from 'antd'
 import { Plus } from 'lucide-react'
+import { useI18n } from '@/i18n'
+
+const { Title } = Typography
 
 interface KanbanColumnProps {
   id: string
@@ -12,33 +16,38 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ id, title, color, items, children, onAddChecklist }: KanbanColumnProps) {
+  const { t } = useI18n()
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
-    <div
+    <Card
       ref={setNodeRef}
       role="group"
       aria-label={`${title} column, ${items.length} items`}
-      className={`flex-1 min-w-[280px] max-w-[360px] rounded-xl p-3 transition-colors ${
+      className={`min-w-[280px] max-w-[360px] flex-1 snap-start transition-colors ${
         isOver
           ? 'bg-blue-50 dark:bg-blue-900/20'
-          : 'bg-gray-50 dark:bg-gray-900/50'
+          : ''
       }`}
+      styles={{ body: { padding: 12 } }}
     >
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <div className={`w-2 h-2 rounded-full ${color}`} />
-        <h3 className="font-medium text-gray-900 dark:text-white">{title}</h3>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded" aria-label={`${items.length} items`}>
-          {items.length}
-        </span>
+      <div className="mb-3 flex items-center justify-between px-1">
+        <Space size={8}>
+          <span className={`h-2 w-2 rounded-full ${color}`} />
+          <Title level={5} style={{ margin: 0 }}>{title}</Title>
+        </Space>
+        <Badge count={items.length} showZero />
       </div>
-      <div className="space-y-3 min-h-[200px]" role="list">
-        {children}
+      <div className="min-h-[200px] space-y-3" role="list">
+        {items.length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('checklists.noneFound')} />
+        ) : children}
       </div>
-      <button onClick={onAddChecklist} className="mt-3 w-full flex items-center justify-center gap-1 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-        <Plus size={16} />
-        Add checklist
-      </button>
-    </div>
+      {onAddChecklist && (
+        <Button block className="mt-3" icon={<Plus size={16} />} onClick={onAddChecklist}>
+          {t('checklists.new')}
+        </Button>
+      )}
+    </Card>
   )
 }

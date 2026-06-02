@@ -16,7 +16,7 @@ test.describe('Run Links Page', () => {
 
   test('opens create run link modal', async ({ page }) => {
     await page.getByRole('button', { name: /new run link/i }).click()
-    await expect(page.getByRole('heading', { name: /New Run Link/i })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: /new run link/i })).toBeVisible()
   })
 
   test('search input is present', async ({ page }) => {

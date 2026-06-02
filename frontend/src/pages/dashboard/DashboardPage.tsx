@@ -148,6 +148,7 @@ export function DashboardPage() {
                 allowClear={false}
               />
               <Button
+                className="dark:!text-gray-100"
                 icon={<DownloadOutlined />}
                 onClick={handleExport}
                 loading={exportCSV.isPending}

@@ -1,100 +1,95 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Play, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { Alert, Button, Card, Result, Space, Tag, Typography } from 'antd'
+import { CheckCircleOutlined, PlayCircleOutlined } from '@ant-design/icons'
 import { isAxiosError } from 'axios'
 import { useExecuteRunLink } from '@/api/useRunLinks'
+import { useI18n } from '@/i18n'
 
-const getErrorMessage = (error: unknown) => {
-  if (isAxiosError<{ error?: string }>(error)) {
-    return error.response?.data?.error ?? 'Failed to execute run link'
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (isAxiosError<{ detail?: string; error?: string }>(error)) {
+    return error.response?.data?.detail ?? error.response?.data?.error ?? fallback
   }
 
-  return 'Failed to execute run link'
+  return fallback
 }
 
 export function RunLinkExecutePage() {
+  const { t } = useI18n()
   const { uniqueId } = useParams<{ uniqueId: string }>()
-  const [instanceId, setInstanceId] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const executeRunLink = useExecuteRunLink()
+  const errorMessage = executeRunLink.error
+    ? getErrorMessage(executeRunLink.error, t('runLinks.executeErrorFallback'))
+    : null
 
-  const handleExecute = () => {
+  function handleExecute() {
     if (!uniqueId) return
     executeRunLink.mutate(uniqueId, {
-      onSuccess: (result) => {
-        setInstanceId(result.instance_id)
-      },
+      onSuccess: (result) => setSuccessMessage(result.detail ?? result.message),
     })
   }
 
-  if (instanceId) {
+  if (successMessage) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="text-green-600 dark:text-green-400" size={32} />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Checklist Started!
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Your checklist instance has been created successfully.
-          </p>
-          <Link
-            to={`/instances/${instanceId}`}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-          >
-            <ExternalLink size={18} />
-            Open Checklist
-          </Link>
-        </div>
-      </div>
+      <RunLinkShell>
+        <Result
+          icon={<CheckCircleOutlined className="text-green-500" />}
+          title={<Typography.Title level={1}>{t('runLinks.executeStartedTitle')}</Typography.Title>}
+          subTitle={successMessage || t('runLinks.executeStartedDescription')}
+        />
+      </RunLinkShell>
     )
   }
 
-  const errorMessage = executeRunLink.error ? getErrorMessage(executeRunLink.error) : null
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-6">
-          <Play className="text-blue-600 dark:text-blue-400 ml-1" size={32} />
-        </div>
-
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Run Checklist
-        </h1>
-
-        <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mb-6 break-all">
-          {uniqueId}
-        </p>
-
-        {errorMessage && (
-          <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm mb-6 text-left">
-            <AlertTriangle size={16} className="flex-shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-
-        <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Click the button below to start a new checklist instance from this run link.
-        </p>
-
-        <button
-          onClick={handleExecute}
-          disabled={executeRunLink.isPending}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Play size={20} />
-          {executeRunLink.isPending ? 'Starting…' : 'Start Checklist'}
-        </button>
-
-        <p className="mt-6 text-xs text-gray-400 dark:text-gray-500">
-          Powered by{' '}
-          <Link to="/" className="underline hover:text-gray-600 dark:hover:text-gray-300">
-            Checkix
-          </Link>
-        </p>
-      </div>
-    </div>
+    <RunLinkShell>
+      <Result
+        icon={<PlayCircleOutlined className="text-blue-500" />}
+        title={<Typography.Title level={1}>{t('runLinks.executeTitle')}</Typography.Title>}
+        subTitle={<RunLinkIdentity uniqueId={uniqueId} />}
+      />
+      {errorMessage && <Alert className="mb-6" message={errorMessage} showIcon type="error" />}
+      <Typography.Paragraph className="text-center" type="secondary">
+        {t('runLinks.executeDescription')}
+      </Typography.Paragraph>
+      <Button
+        block
+        icon={<PlayCircleOutlined />}
+        loading={executeRunLink.isPending}
+        onClick={handleExecute}
+        size="large"
+        type="primary"
+      >
+        {executeRunLink.isPending ? t('runLinks.executeStarting') : t('runLinks.executeStart')}
+      </Button>
+      <Typography.Paragraph className="!mb-0 mt-6 text-center text-xs" type="secondary">
+        {t('runLinks.executePoweredBy')}{' '}
+        <Link to="/" className="underline">Checkix</Link>
+      </Typography.Paragraph>
+    </RunLinkShell>
   )
 }
+
+function RunLinkIdentity({ uniqueId }: { uniqueId?: string }) {
+  if (!uniqueId) return null
+
+  return (
+    <Space direction="vertical" size={8}>
+      <Tag className="mx-auto max-w-full whitespace-normal break-all" color="blue">{uniqueId}</Tag>
+    </Space>
+  )
+}
+
+function RunLinkShell({ children }: { children: ReactNode }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-gray-950">
+      <Card className="w-full max-w-md shadow-xl">
+        {children}
+      </Card>
+    </main>
+  )
+}
+
+export default RunLinkExecutePage

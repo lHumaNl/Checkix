@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
-import { Plus, Grid3X3, Columns3, List, Search } from 'lucide-react'
-import { useChecklists, useBulkDeleteChecklists, useMoveChecklistsToFolder, useAddTagsToChecklists, useDuplicateChecklist, useDeleteChecklist, useUpdateChecklist } from '@/api/useChecklists'
+import { useState } from 'react'
+import { Alert, Button, Card, Empty, Input, Segmented, Skeleton, Space, Tooltip } from 'antd'
+import { Plus, Grid3X3, Columns3, List } from 'lucide-react'
+import { useChecklists, useBulkDeleteChecklists, useDuplicateChecklist, useDeleteChecklist, useUpdateChecklist } from '@/api/useChecklists'
 import { ChecklistGrid } from '@/components/checklists/ChecklistGrid'
 import { ChecklistList } from '@/components/checklists/ChecklistList'
 import { KanbanBoard } from '@/components/checklists/KanbanBoard'
@@ -10,7 +11,6 @@ import { ChecklistFormModal } from './ChecklistFormModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { toast } from '@/hooks/useToast'
 import { useDebounce } from '@/hooks/useDebounce'
-import { ChecklistsSkeleton } from '@/components/skeletons/ChecklistsSkeleton'
 import { useI18n } from '@/i18n'
 
 type ViewMode = 'grid' | 'list' | 'kanban'
@@ -24,7 +24,6 @@ export function ChecklistsPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
-  const selectedIdsRef = useRef(selectedIds)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [confirmState, setConfirmState] = useState<{
     open: boolean
@@ -35,11 +34,7 @@ export function ChecklistsPage() {
 
   const debouncedSearch = useDebounce(search, 300)
 
-  useEffect(() => {
-    selectedIdsRef.current = selectedIds
-  }, [selectedIds])
-
-  const { data: checklistsData, isLoading } = useChecklists({
+  const { data: checklistsData, isLoading, error } = useChecklists({
     folder_id: selectedFolderId,
     status: statusFilter,
     search: debouncedSearch,
@@ -47,8 +42,6 @@ export function ChecklistsPage() {
   })
 
   const bulkDelete = useBulkDeleteChecklists()
-  const moveToFolders = useMoveChecklistsToFolder()
-  const addTags = useAddTagsToChecklists()
   const duplicate = useDuplicateChecklist()
   const deleteOne = useDeleteChecklist()
   const updateChecklist = useUpdateChecklist()
@@ -85,47 +78,16 @@ export function ChecklistsPage() {
   }
 
   const handleBulkDelete = () => {
-    setConfirmState({
-      open: true,
-      title: t('checklists.deleteManyTitle'),
-      description: t('checklists.deleteManyConfirm', { count: selectedIds.length }),
-      onConfirm: () => {
-        const ids = selectedIdsRef.current
-        bulkDelete.mutate(ids, {
-          onSuccess: () => {
-            setSelectedIds([])
-            toast({ title: t('checklists.deletedMany', { count: ids.length }), variant: 'default' })
-          },
-          onError: () => {
-            toast({ title: t('checklists.deleteManyFailed'), variant: 'destructive' })
-          },
-        })
+    const ids = selectedIds
+    bulkDelete.mutate(ids, {
+      onSuccess: () => {
+        setSelectedIds([])
+        toast({ title: t('checklists.deletedMany', { count: ids.length }), variant: 'default' })
+      },
+      onError: () => {
+        toast({ title: t('checklists.deleteManyFailed'), variant: 'destructive' })
       },
     })
-  }
-
-  const handleMoveToFolder = (folderId: number | null) => {
-    moveToFolders.mutate(
-      { ids: selectedIds, folder_id: folderId },
-      {
-        onSuccess: () => {
-          setSelectedIds([])
-          toast({ title: t('checklists.moved'), variant: 'default' })
-        },
-      }
-    )
-  }
-
-  const handleAddTags = (tags: string[]) => {
-    addTags.mutate(
-      { ids: selectedIds, tags },
-      {
-        onSuccess: () => {
-          setSelectedIds([])
-          toast({ title: t('checklists.tagsAdded'), variant: 'default' })
-        },
-      }
-    )
   }
 
   const handleDuplicate = (id: number) => {
@@ -163,8 +125,22 @@ export function ChecklistsPage() {
     kanban: Columns3,
   }
 
+  const viewOptions = (['grid', 'list', 'kanban'] as ViewMode[]).map(mode => {
+    const Icon = viewIcons[mode]
+    return {
+      value: mode,
+      label: (
+        <Tooltip title={mode}>
+          <span className="inline-flex min-h-[28px] items-center">
+            <Icon size={18} />
+          </span>
+        </Tooltip>
+      ),
+    }
+  })
+
   return (
-    <div className="flex flex-col sm:flex-row h-full">
+    <div className="flex h-full flex-col gap-4 sm:flex-row">
       {showFilters && (
         <FilterSidebar
           search={search}
@@ -178,75 +154,69 @@ export function ChecklistsPage() {
         />
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {t('checklists.title')}
-            </h1>
-            <div className="relative flex-1 sm:flex-none">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Card className="mb-4 shadow-sm" styles={{ body: { padding: 16 } }}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <Space size={12} wrap>
+              <h1 className="m-0 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
+                {t('checklists.title')}
+              </h1>
+              <Input.Search
+                allowClear
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(event) => setSearch(event.target.value)}
+                onSearch={setSearch}
                 placeholder={t('common.search')}
-                className="pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                style={{ width: 280 }}
               />
-            </div>
+            </Space>
+
+            <Space wrap>
+              <Segmented
+                value={viewMode}
+                onChange={(value) => setViewMode(value as ViewMode)}
+                options={viewOptions}
+              />
+              <Button
+                type={showFilters ? 'primary' : 'default'}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                {t('common.filters')}
+              </Button>
+              <Button
+                type="primary"
+                icon={<Plus size={18} />}
+                onClick={() => setShowCreateModal(true)}
+              >
+                {t('checklists.new')}
+              </Button>
+            </Space>
           </div>
+        </Card>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-              {(['grid', 'list', 'kanban'] as ViewMode[]).map(mode => {
-                const Icon = viewIcons[mode]
-                return (
-                  <button
-                    key={mode}
-                    onClick={() => setViewMode(mode)}
-                    className={`p-2 rounded-md transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                      viewMode === mode
-                        ? 'bg-white dark:bg-gray-700 shadow text-gray-900 dark:text-white'
-                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    <Icon size={18} />
-                  </button>
-                )
-              })}
-            </div>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                showFilters
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              {t('common.filters')}
-            </button>
-
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
-            >
-              <Plus size={18} />
-              <span className="hidden sm:inline">{t('checklists.new')}</span>
-            </button>
-          </div>
-        </div>
-
-        {isLoading ? (
-          <ChecklistsSkeleton />
+        {error ? (
+          <Alert
+            showIcon
+            type="error"
+            message={t('common.serverError')}
+            description={t('common.failedRefresh')}
+          />
+        ) : isLoading ? (
+          <Card>
+            <Skeleton active paragraph={{ rows: 8 }} />
+          </Card>
         ) : filteredChecklists.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-            <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
-              <Plus size={32} />
-            </div>
-            <p className="text-lg font-medium mb-1">{t('checklists.noneFound')}</p>
-            <p className="text-sm">{t('checklists.createFirst')}</p>
-          </div>
+          <Card className="flex-1">
+            <Empty
+              description={t('checklists.noneFound')}
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            >
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('checklists.createFirst')}</p>
+              <Button type="primary" icon={<Plus size={16} />} onClick={() => setShowCreateModal(true)}>
+                {t('checklists.new')}
+              </Button>
+            </Empty>
+          </Card>
         ) : viewMode === 'grid' ? (
           <ChecklistGrid
             checklists={filteredChecklists}
@@ -261,6 +231,7 @@ export function ChecklistsPage() {
             selectedIds={selectedIds}
             onSelect={handleSelect}
             onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
           />
@@ -280,8 +251,6 @@ export function ChecklistsPage() {
         selectedCount={selectedIds.length}
         totalCount={filteredChecklists.length}
         onDelete={handleBulkDelete}
-        onMoveToFolder={handleMoveToFolder}
-        onAddTags={handleAddTags}
         onSelectAll={handleSelectAll}
         onClearSelection={handleClearSelection}
       />
