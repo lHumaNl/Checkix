@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
-from checkix.dependencies import PaginationParams, get_current_user, paginate_mapped
+from checkix.dependencies import MANAGE_RUN_LINKS_PERMISSION, PaginationParams, paginate_mapped, require_permission
 from checkix.exceptions import NotFoundException
 from checkix.models.checklist import ChecklistTemplate
 from checkix.models.run_link import RunLink
@@ -101,7 +101,7 @@ async def _get_owned_template_or_404(
 @router.get("/", response_model=None)
 async def list_run_links(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_RUN_LINKS_PERMISSION))],
     pagination: Annotated[PaginationParams, Depends()],
 ) -> dict:
     """Return a paginated list of run links for the current user."""
@@ -123,7 +123,7 @@ async def list_run_links(
 async def create_run_link(
     body: RunLinkCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_RUN_LINKS_PERMISSION))],
 ) -> dict:
     """Create a new run link."""
     import uuid
@@ -149,7 +149,7 @@ async def create_run_link(
 async def delete_run_link(
     link_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_RUN_LINKS_PERMISSION))],
 ) -> MessageResponse:
     """Delete a run link permanently."""
     link = await _get_link_or_404(db, link_id, current_user.id)

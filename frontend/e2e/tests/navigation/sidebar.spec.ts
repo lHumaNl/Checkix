@@ -20,15 +20,19 @@ test.describe('Sidebar Navigation', () => {
     await authenticatedPage.waitForLoadState('networkidle')
   })
 
+  function primaryNav(page: import('@playwright/test').Page) {
+    return page.locator('.ant-layout-sider').getByRole('menu', { name: 'Primary navigation' })
+  }
+
   test('all nav items are visible', async ({ page }) => {
     for (const { label } of navLinks) {
-      await expect(page.locator('nav').getByText(label)).toBeVisible()
+      await expect(primaryNav(page).getByRole('link', { name: label })).toBeVisible()
     }
   })
 
   for (const { label, url } of navLinks) {
     test(`navigates to ${label} (${url})`, async ({ page }) => {
-      await page.locator('nav').getByText(label).click()
+      await primaryNav(page).getByRole('link', { name: label }).click()
       await page.waitForLoadState('networkidle')
 
       if (url === '/') {
@@ -43,15 +47,15 @@ test.describe('Sidebar Navigation', () => {
     await page.goto('/checklists')
     await page.waitForLoadState('networkidle')
 
-    const activeLink = page.locator('nav a.bg-blue-50, nav a.dark\\:bg-blue-900\\/50')
-    await expect(activeLink).toHaveText(/Checklists/)
+    const activeItem = primaryNav(page).locator('.ant-menu-item-selected')
+    await expect(activeItem).toContainText('Checklists')
   })
 
   test('Checkix logo navigates to dashboard', async ({ page }) => {
     await page.goto('/checklists')
     await page.waitForLoadState('networkidle')
 
-    await page.getByText('Checkix').click()
+    await page.locator('.ant-layout-sider').getByRole('link', { name: /checkix/i }).click()
     await expect(page).toHaveURL('/')
   })
 
@@ -62,19 +66,18 @@ test.describe('Sidebar Navigation', () => {
 
     const firstLabel = await toggle.getAttribute('aria-label')
     await toggle.click()
-    await page.waitForTimeout(200)
+    await expect(toggle).not.toHaveAttribute('aria-label', firstLabel ?? '')
 
     const secondLabel = await toggle.getAttribute('aria-label')
     expect(secondLabel).not.toBe(firstLabel)
 
     await toggle.click()
-    await page.waitForTimeout(200)
+    await expect(toggle).not.toHaveAttribute('aria-label', secondLabel ?? '')
 
     const thirdLabel = await toggle.getAttribute('aria-label')
     expect(thirdLabel).not.toBe(secondLabel)
 
     await toggle.click()
-    await page.waitForTimeout(200)
 
     const fourthLabel = await toggle.getAttribute('aria-label')
     expect(fourthLabel).toBe(firstLabel)

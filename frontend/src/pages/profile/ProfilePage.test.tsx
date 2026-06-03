@@ -14,8 +14,13 @@ const profile: UserMe = {
   first_name: 'Test',
   last_name: 'User',
   is_active: true,
+  is_staff: true,
+  is_superuser: false,
   date_joined: '2024-01-01T00:00:00Z',
   last_login: '2024-01-02T12:00:00Z',
+  groups: [{ id: 1, group_id: 1, name: 'Operators', role: 'owner' }],
+  permissions: ['manage_assignments'],
+  capabilities: ['management'],
   profile: {
     id: 10,
     timezone: 'UTC',
@@ -39,6 +44,10 @@ vi.mock('@/api/useProfile', () => ({
       return { ...profile, profile: { ...profile.profile, ...payload } }
     },
   }),
+  useChangePassword: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
 }))
 
 vi.mock('@/hooks/useToast', () => ({ toast: vi.fn() }))
@@ -61,6 +70,11 @@ describe('ProfilePage', () => {
 
     expect(screen.getByRole('heading', { name: /my profile/i })).toBeInTheDocument()
     expect(screen.getAllByText('@testuser')).toHaveLength(2)
+    expect(screen.getByText('Support').closest('.ant-tag')).toHaveClass('!inline-flex', '!items-center')
+    expect(screen.getByText('Operators · owner')).toBeInTheDocument()
+    expect(screen.getByText('Manage assignments')).toBeInTheDocument()
+    expect(screen.getByLabelText('Timezone')).toBeInTheDocument()
+    expect(screen.getByText('Change password')).toBeInTheDocument()
     expect(buildUpdatePayload({
       department: 'Engineering',
       employee_id: 'EMP-100',

@@ -8,7 +8,7 @@ test.describe('Theme, i18n, and calendar readability', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page.locator('html')).toHaveClass(/dark/)
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
 
     const cardBackground = await page.locator('main .ant-card').first().evaluate((element) => {
       return getComputedStyle(element).backgroundColor
@@ -26,7 +26,7 @@ test.describe('Theme, i18n, and calendar readability', () => {
     await page.waitForLoadState('networkidle')
 
     await expect(page.locator('html')).not.toHaveClass(/dark/)
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: 'Theme: light' }).click()
     await expect(page.locator('html')).toHaveClass(/dark/)
@@ -99,7 +99,8 @@ test.describe('Theme, i18n, and calendar readability', () => {
 
   test('persists language override and renders localized labels', async ({ page }) => {
     await page.goto('/')
-    await page.getByTestId('language-select').selectOption('es')
+    await page.getByTestId('language-select').click()
+    await page.getByTitle('Español').click()
 
     await expect(page.getByRole('heading', { name: 'Panel' })).toBeVisible()
     await expect(page.getByText('Listas').first()).toBeVisible()
@@ -123,5 +124,15 @@ test.describe('Theme, i18n, and calendar readability', () => {
       return getComputedStyle(element).backgroundColor
     })
     expect(calendarBackground).not.toBe('rgb(255, 255, 255)')
+  })
+
+  test('renders API-seeded calendar event and opens event details', async ({ page, e2eData }) => {
+    const scenario = await e2eData.createRichScenario('calendar')
+
+    await page.goto('/calendar')
+    await expect(page.getByText(scenario.calendarEventTitle).first()).toBeVisible({ timeout: 10_000 })
+
+    await page.getByText(scenario.calendarEventTitle).first().click()
+    await expect(page.getByRole('dialog').getByRole('textbox', { name: 'Event title' })).toHaveValue(scenario.calendarEventTitle)
   })
 })

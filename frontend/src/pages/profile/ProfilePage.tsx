@@ -15,8 +15,9 @@ import {
   Tag,
   Typography,
 } from 'antd'
-import { Building2, Clock, Globe, IdCard, Mail, Save } from 'lucide-react'
-import { useProfile, useUpdateProfile } from '@/api/useProfile'
+import type { ReactNode } from 'react'
+import { Building2, Clock, Globe, IdCard, KeyRound, Mail, Save, ShieldCheck, UsersRound } from 'lucide-react'
+import { useChangePassword, useProfile, useUpdateProfile } from '@/api/useProfile'
 import type { UserMe } from '@/api/useProfile'
 import { toast } from '@/hooks/useToast'
 import { languageOptions, useI18n } from '@/i18n'
@@ -25,6 +26,25 @@ import { buildUpdatePayload, type ProfileFormValues } from './profilePayload'
 
 const { Text, Title } = Typography
 const CARD_BODY_STYLE = { padding: 24 }
+const MIN_PASSWORD_LENGTH = 8
+const TIMEZONE_OPTIONS = [
+  'UTC',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Paris',
+  'Europe/Madrid',
+  'Europe/Moscow',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Sao_Paulo',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Shanghai',
+  'Asia/Tokyo',
+  'Australia/Sydney',
+]
 
 type Translate = (key: MessageKey, values?: Record<string, string | number>) => string
 
@@ -34,6 +54,12 @@ interface ProfileFormProps {
   onSubmit: (values: ProfileFormValues) => void
   profile: UserMe
   t: Translate
+}
+
+interface PasswordFormValues {
+  current_password: string
+  new_password: string
+  confirm_password: string
 }
 
 function ProfileSkeleton() {
@@ -63,14 +89,12 @@ function ProfileSummary({ memberSince, profile, t }: { memberSince: string; prof
             {displayName}
           </Title>
           <Text type="secondary">@{profile.username}</Text>
-          <Space size={6} wrap>
-            <Clock size={12} />
-            <Text type="secondary">{t('profile.memberSince', { date: memberSince })}</Text>
-          </Space>
+          <Text type="secondary" className="inline-flex items-center gap-1 leading-none">
+            <Clock size={12} aria-hidden="true" />
+            <span>{t('profile.memberSince', { date: memberSince })}</span>
+          </Text>
           {profile.profile?.department && (
-            <Tag color="blue" icon={<Building2 size={12} />}>
-              {profile.profile.department}
-            </Tag>
+            <DepartmentTag>{profile.profile.department}</DepartmentTag>
           )}
         </Space>
       </Space>
@@ -107,7 +131,14 @@ function ProfileForm({ initialValues, isSaving, onSubmit, profile, t }: ProfileF
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item label={t('profile.timezone')} name="timezone">
-              <Input prefix={<Globe size={16} />} placeholder={t('profile.timezonePlaceholder')} />
+              <Select
+                allowClear
+                showSearch
+                prefix={<Globe size={16} />}
+                placeholder={t('profile.timezonePlaceholder')}
+                optionFilterProp="label"
+                options={TIMEZONE_OPTIONS.map(zone => ({ value: zone, label: zone }))}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -148,14 +179,58 @@ function AccountDetails({ memberSince, profile, t }: { memberSince: string; prof
   )
 }
 
+function AccessDetails({ profile, t }: { profile: UserMe; t: Translate }) {
+  return (
+    <Card title={<CardTitle icon={<ShieldCheck size={18} />} title={t('profile.access')} />} styles={{ body: CARD_BODY_STYLE }}>
+      <Space direction="vertical" size={16} className="w-full">
+        <AccessTags icon={<UsersRound size={16} />} items={profile.groups.map(formatGroup)} label={t('profile.groups')} t={t} />
+        <AccessTags items={profile.permissions.map(permission => t(permissionLabelKeys[permission]))} label={t('profile.permissions')} t={t} />
+        <AccessTags items={profile.capabilities} label={t('profile.capabilities')} t={t} />
+      </Space>
+    </Card>
+  )
+}
+
+function PasswordChangeCard({ isSaving, onSubmit, t }: { isSaving: boolean; onSubmit: (values: PasswordFormValues) => void; t: Translate }) {
+  const [form] = Form.useForm<PasswordFormValues>()
+  return (
+    <Card title={<CardTitle icon={<KeyRound size={18} />} title={t('profile.changePassword')} />} styles={{ body: CARD_BODY_STYLE }}>
+      <Form form={form} layout="vertical" requiredMark={false} onFinish={(values) => onSubmit(values)}>
+        <Form.Item label={t('profile.currentPassword')} name="current_password" rules={[{ required: true, message: t('profile.currentPasswordRequired') }]}>
+          <Input.Password autoComplete="current-password" />
+        </Form.Item>
+        <Form.Item label={t('profile.newPassword')} name="new_password" rules={getPasswordRules(t)}>
+          <Input.Password autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item dependencies={['new_password']} label={t('profile.confirmPassword')} name="confirm_password" rules={getConfirmPasswordRules(t)}>
+          <Input.Password autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+          <Button type="primary" htmlType="submit" icon={<KeyRound size={16} />} loading={isSaving}>{t('profile.updatePassword')}</Button>
+        </Form.Item>
+      </Form>
+    </Card>
+  )
+}
+
 function StatusTag({ isActive, t }: { isActive: boolean; t: Translate }) {
   return <Tag color={isActive ? 'success' : 'error'}>{isActive ? t('common.active') : t('common.inactive')}</Tag>
+}
+
+function DepartmentTag({ children }: { children: ReactNode }) {
+  return (
+    <Tag color="blue" className="!inline-flex !items-center gap-1 align-middle !leading-5">
+      <Building2 className="block" size={12} aria-hidden="true" />
+      <span>{children}</span>
+    </Tag>
+  )
 }
 
 export function ProfilePage() {
   const { language, t } = useI18n()
   const { data: profile, isLoading, isError } = useProfile()
   const updateProfile = useUpdateProfile()
+  const changePassword = useChangePassword()
 
   const handleSubmit = async (values: ProfileFormValues) => {
     try {
@@ -163,6 +238,15 @@ export function ProfilePage() {
       toast({ title: t('profile.updated'), variant: 'default' })
     } catch {
       toast({ title: t('profile.updateFailed'), variant: 'destructive' })
+    }
+  }
+
+  const handlePasswordSubmit = async (values: PasswordFormValues) => {
+    try {
+      await changePassword.mutateAsync({ current_password: values.current_password, new_password: values.new_password })
+      toast({ title: t('profile.passwordUpdated'), variant: 'default' })
+    } catch {
+      toast({ title: t('profile.passwordUpdateFailed'), variant: 'destructive' })
     }
   }
 
@@ -183,9 +267,52 @@ export function ProfilePage() {
         profile={profile}
         t={t}
       />
+      <AccessDetails profile={profile} t={t} />
+      <PasswordChangeCard isSaving={changePassword.isPending} onSubmit={handlePasswordSubmit} t={t} />
       <AccountDetails memberSince={memberSince} profile={profile} t={t} />
     </div>
   )
+}
+
+const permissionLabelKeys = {
+  manage_assignments: 'profile.permissionAssignments',
+  manage_run_links: 'profile.permissionRunLinks',
+  manage_webhooks: 'profile.permissionWebhooks',
+} satisfies Record<string, MessageKey>
+
+function AccessTags({ icon, items, label, t }: { icon?: ReactNode; items: string[]; label: string; t: Translate }) {
+  return (
+    <div>
+      <Text strong className="mb-2 inline-flex items-center gap-1">{icon}{label}</Text>
+      <div className="flex flex-wrap gap-2">{items.length ? items.map(item => <Tag key={item}>{item}</Tag>) : <Text type="secondary">{t('common.notAvailable')}</Text>}</div>
+    </div>
+  )
+}
+
+function CardTitle({ icon, title }: { icon: ReactNode; title: string }) {
+  return <span className="inline-flex items-center gap-2">{icon}{title}</span>
+}
+
+function formatGroup(group: UserMe['groups'][number]) {
+  return group.role ? `${group.name} · ${group.role}` : group.name
+}
+
+function getPasswordRules(t: Translate) {
+  return [
+    { required: true, message: t('profile.newPasswordRequired') },
+    { min: MIN_PASSWORD_LENGTH, message: t('profile.passwordMinLength', { count: MIN_PASSWORD_LENGTH }) },
+  ]
+}
+
+function getConfirmPasswordRules(t: Translate) {
+  return [
+    { required: true, message: t('profile.confirmPasswordRequired') },
+    ({ getFieldValue }: { getFieldValue: (name: string) => string }) => ({
+      validator(_: unknown, value: string) {
+        return !value || getFieldValue('new_password') === value ? Promise.resolve() : Promise.reject(new Error(t('profile.passwordMismatch')))
+      },
+    }),
+  ]
 }
 
 function PageHeader({ t }: { t: Translate }) {

@@ -52,7 +52,7 @@ export function MiniCalendar({ events = [], selectedDate, onDateSelect, currentM
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          {currentMonth.toLocaleDateString(language, { month: 'long', year: 'numeric' })}
+          {formatMonthLabel(currentMonth, language)}
         </h3>
         <div className="flex gap-1">
           <button
@@ -120,6 +120,12 @@ function getWeekdayLabels(language: string) {
     date.setDate(baseDate.getDate() + index)
     return date.toLocaleDateString(language, { weekday: 'short' }).slice(0, 1)
   })
+}
+
+function formatMonthLabel(date: Date, language: string) {
+  const label = date.toLocaleDateString(language, { month: 'long', year: 'numeric' })
+  if (language !== 'ru') return label
+  return label.charAt(0).toLocaleLowerCase('ru-RU') + label.slice(1)
 }
 
 export default MiniCalendar

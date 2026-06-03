@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test'
+import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test'
 
 export interface TestUser {
   username: string
@@ -7,6 +7,198 @@ export interface TestUser {
 
 export const testUsers: Record<string, TestUser> = {
   admin: { username: 'admin', password: '1' },
+}
+
+const API_ROOT = '/api'
+const E2E_PREFIX = 'e2e-rich'
+
+interface IdentifiedEntity {
+  id: number
+}
+
+export interface RichE2EScenario {
+  calendarEventTitle: string
+  checklistDescription: string
+  checklistId: number
+  checklistItemTitles: string[]
+  checklistTitle: string
+  folderName: string
+  instanceId: number
+  tagName: string
+  todoItemTitles: string[]
+  todoListId: number
+  todoListName: string
+}
+
+interface CreatedIds {
+  calendarEvents: number[]
+  checklists: number[]
+  folders: number[]
+  instances: number[]
+  tags: number[]
+  todoLists: number[]
+}
+
+export class E2EDataBuilder {
+  private accessToken: string | null = null
+  private readonly created: CreatedIds = {
+    calendarEvents: [],
+    checklists: [],
+    folders: [],
+    instances: [],
+    tags: [],
+    todoLists: [],
+  }
+
+  constructor(private readonly request: APIRequestContext) {}
+
+  async createRichScenario(label = 'core'): Promise<RichE2EScenario> {
+    const runId = this.makeRunId(label)
+    const tag = await this.createTrackedTag(`${runId}-tag`)
+    const folder = await this.createTrackedFolder(`${runId}-folder`)
+    const checklist = await this.createTrackedChecklist(runId, folder.id, tag.id)
+    const todo = await this.createTrackedTodoList(runId, folder.id, tag.id)
+    await this.createTrackedCalendarEvent(runId, checklist.id)
+    const instance = await this.createCompletedInstance(runId, checklist.id)
+
+    return {
+      calendarEventTitle: `${runId} calendar review`,
+      checklistDescription: `${runId} checklist description`,
+      checklistId: checklist.id,
+      checklistItemTitles: [`${runId} first check`, `${runId} second check`],
+      checklistTitle: `${runId} checklist`,
+      folderName: `${runId}-folder`,
+      instanceId: instance.id,
+      tagName: `${runId}-tag`,
+      todoItemTitles: [`${runId} pending todo`, `${runId} completed todo`],
+      todoListId: todo.id,
+      todoListName: `${runId} todo list`,
+    }
+  }
+
+  async cleanup(): Promise<void> {
+    if (!this.accessToken) return
+    await this.deleteTracked('instances', (id) => `${API_ROOT}/instances/${id}/`)
+    await this.deleteTracked('calendarEvents', (id) => `${API_ROOT}/calendar-events/${id}/`)
+    await this.deleteTracked('todoLists', (id) => `${API_ROOT}/todos/${id}/`)
+    await this.deleteTracked('checklists', (id) => `${API_ROOT}/checklists/${id}/`)
+    await this.deleteTracked('folders', (id) => `${API_ROOT}/folders/${id}/`)
+    await this.deleteTracked('tags', (id) => `${API_ROOT}/tags/${id}/`)
+  }
+
+  private makeRunId(label: string): string {
+    const suffix = Math.random().toString(36).slice(2, 8)
+    return `${E2E_PREFIX}-${label}-${Date.now()}-${suffix}`
+  }
+
+  private async createTrackedTag(name: string): Promise<IdentifiedEntity> {
+    const tag = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/tags/`, { name, color: '#2563eb' })
+    this.created.tags.push(tag.id)
+    return tag
+  }
+
+  private async createTrackedFolder(name: string): Promise<IdentifiedEntity> {
+    const folder = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/folders/`, { name })
+    this.created.folders.push(folder.id)
+    return folder
+  }
+
+  private async createTrackedChecklist(runId: string, folderId: number, tagId: number): Promise<IdentifiedEntity> {
+    const checklist = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/checklists/`, {
+      name: `${runId} checklist`,
+      description: `${runId} checklist description`,
+      folder_id: folderId,
+      tags: [tagId],
+      status: 'active',
+      sequential_mode: true,
+      category: 'E2E',
+      items: [
+        { title: `${runId} first check`, order: 0, is_required: true },
+        { title: `${runId} second check`, order: 1, is_required: false },
+      ],
+    })
+    this.created.checklists.push(checklist.id)
+    return checklist
+  }
+
+  private async createTrackedTodoList(runId: string, folderId: number, tagId: number): Promise<IdentifiedEntity> {
+    const list = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/todos/`, {
+      name: `${runId} todo list`,
+      description: `${runId} todo description`,
+      folder_id: folderId,
+      tags: [tagId],
+      priority: 'high',
+    })
+    this.created.todoLists.push(list.id)
+    await this.createTodoItems(runId, list.id)
+    return list
+  }
+
+  private async createTodoItems(runId: string, listId: number): Promise<void> {
+    await this.api('POST', `${API_ROOT}/todos/${listId}/items/`, { title: `${runId} pending todo`, priority: 'high', order: 0 })
+    const done = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/todos/${listId}/items/`, { title: `${runId} completed todo`, priority: 'medium', order: 1 })
+    await this.api('PUT', `${API_ROOT}/todos/${listId}/items/${done.id}/`, { status: 'completed', is_completed: true })
+  }
+
+  private async createTrackedCalendarEvent(runId: string, checklistId: number): Promise<IdentifiedEntity> {
+    const event = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/calendar-events/`, {
+      title: `${runId} calendar review`,
+      description: `${runId} calendar description`,
+      start_time: this.futureAtHour(10),
+      end_time: this.futureAtHour(11),
+      event_type: 'checklist',
+      checklist_template: checklistId,
+      color: '#7c3aed',
+    })
+    this.created.calendarEvents.push(event.id)
+    return event
+  }
+
+  private async createCompletedInstance(runId: string, checklistId: number): Promise<IdentifiedEntity> {
+    const instance = await this.api<IdentifiedEntity>('POST', `${API_ROOT}/instances/`, {
+      template_id: checklistId,
+      name: `${runId} completed run`,
+    })
+    this.created.instances.push(instance.id)
+    await this.api('POST', `${API_ROOT}/instances/${instance.id}/start/`)
+    await this.api('POST', `${API_ROOT}/instances/${instance.id}/complete/`)
+    return instance
+  }
+
+  private futureAtHour(hour: number): string {
+    const date = new Date()
+    date.setDate(date.getDate() + 1)
+    date.setHours(hour, 0, 0, 0)
+    return date.toISOString()
+  }
+
+  private async api<T = unknown>(method: string, url: string, data?: unknown): Promise<T> {
+    await this.ensureAuthenticated()
+    const response = await this.request.fetch(url, { data, headers: this.authHeaders(), method })
+    expect(response.ok(), `${method} ${url} should succeed`).toBeTruthy()
+    return response.json() as Promise<T>
+  }
+
+  private async ensureAuthenticated(): Promise<void> {
+    if (this.accessToken) return
+    const response = await this.request.post(`${API_ROOT}/auth/token/`, { data: testUsers.admin })
+    expect(response.ok(), 'E2E API login should succeed').toBeTruthy()
+    const body = await response.json() as { access: string }
+    this.accessToken = body.access
+  }
+
+  private authHeaders(): Record<string, string> {
+    return { Authorization: `Bearer ${this.accessToken}` }
+  }
+
+  private async deleteTracked(key: keyof CreatedIds, urlFor: (id: number) => string): Promise<void> {
+    const ids = [...this.created[key]].reverse()
+    await Promise.all(ids.map((id) => this.deleteIfExists(urlFor(id))))
+  }
+
+  private async deleteIfExists(url: string): Promise<void> {
+    await this.request.delete(url, { headers: this.authHeaders() }).catch(() => undefined)
+  }
 }
 
 export class AuthPage {
@@ -134,6 +326,7 @@ export class InstancePage {
 type TestFixtures = {
   authPage: AuthPage
   checklistsPage: ChecklistsPage
+  e2eData: E2EDataBuilder
   instancePage: InstancePage
   authenticatedPage: Page
 }
@@ -145,6 +338,12 @@ export const test = base.extend<TestFixtures>({
 
   checklistsPage: async ({ page }, fixture) => {
     await fixture(new ChecklistsPage(page))
+  },
+
+  e2eData: async ({ request }, fixture) => {
+    const builder = new E2EDataBuilder(request)
+    await fixture(builder)
+    await builder.cleanup()
   },
 
   instancePage: async ({ page }, fixture) => {

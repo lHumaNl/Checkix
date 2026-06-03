@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import or_, select, func
+from sqlalchemy import delete, func, insert, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
@@ -18,6 +18,7 @@ from checkix.models.checklist import (
     ChecklistVersion,
     Placeholder,
     PlaceholderOption,
+    checklist_templates_tags,
 )
 from checkix.models.tag import Tag
 from checkix.models.user import User
@@ -94,7 +95,16 @@ async def _set_tags(
     found = list(result.scalars().all())
     if len(found) != len(tag_ids):
         raise BadRequestException(detail="One or more tag IDs are invalid")
-    template.tags = found
+    await db.execute(
+        delete(checklist_templates_tags).where(
+            checklist_templates_tags.c.template_id == template.id
+        )
+    )
+    if tag_ids:
+        await db.execute(
+            insert(checklist_templates_tags),
+            [{"template_id": template.id, "tag_id": tag_id} for tag_id in tag_ids],
+        )
 
 
 async def _load_checklist_item_tree(

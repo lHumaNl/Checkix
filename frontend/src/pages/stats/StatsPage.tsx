@@ -16,6 +16,7 @@ import type { Dayjs } from 'dayjs'
 import { useOverallStats, useTopTemplates, useStatsByCategory, useRecentStats } from '@/api/useStats'
 import { useExportStatsCSV } from '@/api/useCompletionData'
 import { useI18n } from '@/i18n'
+import type { MessageKey } from '@/i18n/messages'
 
 const { RangePicker } = DatePicker
 const { Text, Title } = Typography
@@ -25,7 +26,12 @@ const EMPTY_VALUE = '—'
 const HIGH_RATE_THRESHOLD = 80
 const MEDIUM_RATE_THRESHOLD = 50
 const RECENT_ACTIVITY_LIMIT = 14
-const PRESET_DAYS = [7, 30, 90]
+const PRESET_DAYS = [7, 30, 90] as const
+const PRESET_LABEL_KEYS = {
+  7: 'stats.preset7Days',
+  30: 'stats.preset30Days',
+  90: 'stats.preset90Days',
+} satisfies Record<number, MessageKey>
 
 type RangePickerValue = [Dayjs | null, Dayjs | null] | null
 
@@ -108,7 +114,7 @@ export function StatsPage() {
     setDateRange([value[0], value[1]])
   }
 
-  function setPreset(days: number) {
+  function setPreset(days: (typeof PRESET_DAYS)[number]) {
     const nextRange: [Dayjs, Dayjs] = [dayjs().subtract(days, 'day'), dayjs()]
     setDateRange(nextRange)
     setAppliedRange(nextRange)
@@ -183,7 +189,7 @@ export function StatsPage() {
           <Space wrap>
             {PRESET_DAYS.map(days => (
               <Button key={days} onClick={() => setPreset(days)}>
-                {days}d
+                {t(PRESET_LABEL_KEYS[days])}
               </Button>
             ))}
           </Space>

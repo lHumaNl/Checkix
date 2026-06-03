@@ -78,6 +78,7 @@ describe('StatsPage', () => {
     expect(screen.getByText('5 runs')).toBeInTheDocument()
     expect(screen.getByText('Quality')).toBeInTheDocument()
     expect(screen.getByText('2026-06-02')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Last 7 days' })).toBeInTheDocument()
   })
 
   it('exports using the applied default date range', () => {

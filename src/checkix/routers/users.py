@@ -4,23 +4,31 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from pydantic import BaseModel
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.config import settings
-from checkix.dependencies import PaginationParams, get_current_user, paginate
+from checkix.dependencies import (
+    PaginationParams,
+    get_current_user,
+    get_user_capabilities,
+    get_user_permissions,
+    paginate,
+)
 from checkix.database import get_db
-from checkix.exceptions import ConflictException, ForbiddenException, NotFoundException
+from checkix.exceptions import BadRequestException, ConflictException, ForbiddenException, NotFoundException
 from checkix.models.user import Group, GroupMembership, User, UserProfile
 from checkix.schemas.auth import WsTicketResponse
 from checkix.schemas.user import (
     GroupCreate,
     GroupMembershipOut,
     GroupOut,
+    UserGroupMembershipOut,
     UserMeOut,
+    UserPasswordChange,
     UserProfileUpdate,
 )
 from checkix.services.auth import AuthService
@@ -65,9 +73,9 @@ class MemberAdd(BaseModel):
 @router.get("/me/", response_model=UserMeOut)
 async def get_current_user_profile(
     current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
+) -> UserMeOut:
     """Return the authenticated user's profile including nested profile data."""
-    return current_user
+    return _user_me_response(current_user)
 
 
 @router.put("/me/", response_model=UserMeOut)
@@ -75,7 +83,7 @@ async def update_current_user_profile(
     payload: UserProfileUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
+) -> UserMeOut:
     """Update the authenticated user's profile fields."""
     profile = current_user.profile
 
@@ -91,7 +99,55 @@ async def update_current_user_profile(
 
     await db.commit()
     await db.refresh(current_user)
-    return current_user
+    return _user_me_response(current_user)
+
+
+@router.post("/me/password/", status_code=status.HTTP_204_NO_CONTENT)
+async def change_current_user_password(
+    payload: UserPasswordChange,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> Response:
+    """Change the authenticated user's password after verifying the current one."""
+    if not AuthService.verify_password(payload.current_password, current_user.password):
+        raise BadRequestException(detail="Current password is incorrect")
+
+    current_user.password = AuthService.hash_password(payload.new_password)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _user_me_response(user: User) -> UserMeOut:
+    """Build the authoritative current-user contract for the frontend."""
+    return UserMeOut(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        is_active=user.is_active,
+        is_staff=user.is_staff,
+        is_superuser=user.is_superuser,
+        profile=user.profile,
+        date_joined=user.date_joined,
+        last_login=user.last_login,
+        groups=_membership_responses(user),
+        permissions=get_user_permissions(user),
+        capabilities=get_user_capabilities(user),
+    )
+
+
+def _membership_responses(user: User) -> list[UserGroupMembershipOut]:
+    """Serialize group memberships without making group names authorization data."""
+    return [
+        UserGroupMembershipOut(
+            id=membership.id,
+            group_id=membership.group_id,
+            name=membership.group.name,
+            role=membership.role,
+        )
+        for membership in user.group_memberships
+    ]
 
 
 # ---------------------------------------------------------------------------

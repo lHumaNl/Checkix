@@ -11,15 +11,27 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from checkix.config import settings
 from checkix.database import get_db
 from checkix.exceptions import ForbiddenException, UnauthorizedException
-from checkix.models.user import User
+from checkix.models.user import GroupMembership, User
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 ACCESS_TOKEN_TYPE = "access"
 TOKEN_TYPE_CLAIM = "type"
+MANAGE_ASSIGNMENTS_PERMISSION = "manage_assignments"
+MANAGE_RUN_LINKS_PERMISSION = "manage_run_links"
+MANAGE_WEBHOOKS_PERMISSION = "manage_webhooks"
+MANAGEMENT_CAPABILITY = "management"
+MANAGEMENT_PERMISSIONS = frozenset(
+    {
+        MANAGE_ASSIGNMENTS_PERMISSION,
+        MANAGE_RUN_LINKS_PERMISSION,
+        MANAGE_WEBHOOKS_PERMISSION,
+    }
+)
 
 
 async def get_current_user(
@@ -58,7 +70,14 @@ async def get_current_user(
     except (ValueError, TypeError) as exc:
         raise UnauthorizedException(detail="Invalid token payload") from exc
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User)
+        .options(
+            selectinload(User.profile),
+            selectinload(User.group_memberships).selectinload(GroupMembership.group),
+        )
+        .where(User.id == user_id)
+    )
     user = result.scalar_one_or_none()
 
     if user is None:
@@ -99,6 +118,38 @@ async def get_admin_user(
     if not current_user.is_admin:
         raise ForbiddenException(detail="Admin privileges required")
     return current_user
+
+
+def get_user_permissions(user: User) -> list[str]:
+    """Return backend-authoritative permissions granted to *user*."""
+    if user.is_admin:
+        return sorted(MANAGEMENT_PERMISSIONS)
+    return []
+
+
+def get_user_capabilities(user: User) -> list[str]:
+    """Return high-level UI capabilities derived from concrete permissions."""
+    if MANAGEMENT_PERMISSIONS.intersection(get_user_permissions(user)):
+        return [MANAGEMENT_CAPABILITY]
+    return []
+
+
+def user_has_permission(user: User, permission: str) -> bool:
+    """Return whether *user* has the requested backend permission."""
+    return permission in get_user_permissions(user)
+
+
+def require_permission(permission: str) -> Callable[..., Any]:
+    """Create a dependency that rejects users missing *permission*."""
+
+    async def permission_dependency(
+        current_user: Annotated[User, Depends(get_current_user)],
+    ) -> User:
+        if not user_has_permission(current_user, permission):
+            raise ForbiddenException(detail=f"Permission required: {permission}")
+        return current_user
+
+    return permission_dependency
 
 
 class PaginationParams:

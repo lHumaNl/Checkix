@@ -14,9 +14,9 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
     // Map to frontend field names
     total_checklists: data.total_templates ?? 0,
     completed_checklists: data.completed_today ?? 0,
-    total_todos: 0,
-    completed_todos: 0,
-    upcoming_events: data.overdue_instances ?? 0,
+    total_todos: data.total_todos ?? 0,
+    completed_todos: data.completed_todos ?? 0,
+    upcoming_events: data.upcoming_events ?? 0,
     streak_days: data.active_instances ?? 0,
     completion_rate: data.avg_completion_rate ?? 0,
     weekly_change: 0,

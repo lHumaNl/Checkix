@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -50,7 +50,6 @@ describe('LoginPage', () => {
   })
 
   it('updates login copy and persists language before authentication', async () => {
-    const user = userEvent.setup()
     const Wrapper = createWrapper()
 
     render(
@@ -59,7 +58,8 @@ describe('LoginPage', () => {
       </Wrapper>
     )
 
-    await user.selectOptions(screen.getByTestId('language-select'), 'es')
+    fireEvent.mouseDown(within(screen.getByTestId('language-select')).getByRole('combobox'))
+    fireEvent.click(await screen.findByText('Español'))
 
     expect(localStorage.getItem('language')).toBe('es')
     expect(screen.getByText('Inicia sesión en tu cuenta')).toBeInTheDocument()

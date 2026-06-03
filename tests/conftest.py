@@ -96,7 +96,13 @@ async def user_factory(
 ) -> Callable[..., Awaitable[User]]:
     """Create active users with valid bcrypt hashes."""
 
-    async def create_user(username: str, *, is_active: bool = True) -> User:
+    async def create_user(
+        username: str,
+        *,
+        is_active: bool = True,
+        is_staff: bool = False,
+        is_superuser: bool = False,
+    ) -> User:
         async with db_session_factory() as session:
             user = User(
                 username=username,
@@ -105,8 +111,8 @@ async def user_factory(
                 first_name="",
                 last_name="",
                 is_active=is_active,
-                is_staff=False,
-                is_superuser=False,
+                is_staff=is_staff,
+                is_superuser=is_superuser,
             )
             session.add(user)
             await session.commit()
@@ -120,11 +126,16 @@ async def user_factory(
 async def authenticated_user_factory(
     api_client: AsyncClient,
     user_factory: Callable[..., Awaitable[User]],
-) -> Callable[[str], Awaitable[AuthenticatedUser]]:
+) -> Callable[..., Awaitable[AuthenticatedUser]]:
     """Create a user and return bearer headers from the real login endpoint."""
 
-    async def create_authenticated_user(username: str) -> AuthenticatedUser:
-        user = await user_factory(username)
+    async def create_authenticated_user(
+        username: str,
+        *,
+        is_staff: bool = False,
+        is_superuser: bool = False,
+    ) -> AuthenticatedUser:
+        user = await user_factory(username, is_staff=is_staff, is_superuser=is_superuser)
         response = await api_client.post(
             "/api/auth/token/",
             json={"username": username, "password": TEST_PASSWORD},

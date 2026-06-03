@@ -78,11 +78,17 @@ function ChecklistItemRow({ index, item, t }: { index: number; item: ChecklistIt
   )
 }
 
-function TagSection({ tags, t }: { tags: string[]; t: Translate }) {
+type DisplayTag = string | { name: string }
+
+function getTagName(tag: DisplayTag): string {
+  return typeof tag === 'string' ? tag : tag.name
+}
+
+function TagSection({ tags, t }: { tags: DisplayTag[]; t: Translate }) {
   return (
     <Card title={<Space><Tags size={16} />{t('checklists.tags')}</Space>} styles={{ body: CARD_BODY_STYLE }}>
       <Space size={[4, 8]} wrap>
-        {tags.map((tag) => <Tag key={tag} color="blue">{tag}</Tag>)}
+        {tags.map((tag) => <Tag key={getTagName(tag)} color="blue">{getTagName(tag)}</Tag>)}
       </Space>
     </Card>
   )
@@ -236,7 +242,7 @@ export function ChecklistDetailPage() {
           <Descriptions className="mt-4" column={{ xs: 1, sm: 2 }} items={metadataItems} />
         </Card>
 
-        {checklist.tags?.length > 0 && <TagSection tags={checklist.tags} t={t} />}
+        {checklist.tags?.length > 0 && <TagSection tags={checklist.tags as DisplayTag[]} t={t} />}
 
         <Card title={t('checklists.itemsTitle')} styles={{ body: CARD_BODY_STYLE }}>
           <List

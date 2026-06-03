@@ -61,12 +61,14 @@ class ChecklistInstance(TimestampMixin, Base):
     item_instances: Mapped[list[ChecklistItemInstance]] = relationship(
         "ChecklistItemInstance",
         back_populates="instance",
+        cascade="all, delete-orphan",
         lazy="selectin",
         order_by="ChecklistItemInstance.order",
     )
     completion_logs: Mapped[list[CompletionLog]] = relationship(
         "CompletionLog",
         back_populates="instance",
+        cascade="all, delete-orphan",
         lazy="selectin",
         order_by="CompletionLog.timestamp.desc()",
     )

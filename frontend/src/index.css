@@ -58,6 +58,191 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* ---- ProLayout shell fixes ---- */
+.checkix-pro-layout .ant-pro-global-header {
+  height: auto;
+  min-height: 64px;
+  align-items: center;
+}
+
+.checkix-pro-layout .ant-pro-global-header-right-content {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.checkix-pro-layout .ant-pro-layout-container {
+  min-width: 0;
+}
+
+.checkix-pro-layout .ant-pro-global-header-logo,
+.checkix-pro-layout .ant-pro-global-header-logo > a,
+.checkix-pro-layout .ant-pro-sider-logo,
+.checkix-pro-layout .ant-pro-sider-logo > a {
+  min-height: 64px;
+  align-items: center;
+}
+
+.checkix-pro-layout .checkix-brand-link {
+  min-height: 64px;
+  line-height: 1;
+}
+
+.checkix-content-header {
+  position: sticky;
+  top: 0;
+  z-index: 18;
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.72);
+  background: hsl(var(--background) / 0.9);
+  padding: 0.75rem 1.5rem;
+  backdrop-filter: blur(18px);
+}
+
+.checkix-content-header-actions {
+  width: 100%;
+}
+
+.checkix-content-header-actions .checkix-header-controls {
+  padding-inline: 0;
+}
+
+.checkix-pro-layout--top .ant-pro-page-container .ant-pro-page-container-warp-page-header {
+  padding-block: 0.75rem 0.5rem;
+}
+
+.checkix-pro-layout--top .ant-pro-page-container .ant-page-header {
+  padding-block: 0;
+}
+
+.checkix-pro-layout--top .ant-pro-page-container .ant-pro-grid-content {
+  padding-block-start: 0.5rem;
+}
+
+.checkix-header-controls .ant-btn,
+.checkix-header-controls .ant-select-single {
+  flex: 0 0 auto;
+  height: 40px;
+}
+
+.checkix-header-controls .ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkix-header-controls .ant-select-selector {
+  align-items: center;
+}
+
+.checkix-language-selector {
+  --checkix-language-selector-radius: 9999px;
+}
+
+.checkix-language-selector .ant-select-selector {
+  border-color: transparent !important;
+  border-radius: var(--checkix-language-selector-radius) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.checkix-language-selector .ant-select-arrow,
+.checkix-language-selector .ant-select-selection-item,
+.checkix-language-selector .ant-select-selection-placeholder,
+.checkix-language-selector .ant-select-selector,
+.checkix-language-selector.ant-select-dropdown,
+.checkix-language-selector.ant-select-dropdown .ant-select-item {
+  border-radius: var(--checkix-language-selector-radius);
+}
+
+.checkix-language-selector.ant-select-focused .ant-select-selector,
+.checkix-language-selector.ant-select-open .ant-select-selector {
+  border-color: hsl(var(--border)) !important;
+}
+
+.checkix-language-selector .ant-select-selection-wrap,
+.checkix-language-selector .ant-select-selection-item,
+.checkix-language-selector .ant-select-selection-placeholder {
+  display: flex;
+  align-items: center;
+}
+
+.checkix-header-search {
+  min-width: 12rem;
+}
+
+.checkix-header-search .ant-input-search,
+.checkix-header-search .ant-input-search .ant-input-group,
+.checkix-header-search .ant-input-search .ant-input-group-wrapper {
+  height: 40px;
+}
+
+.checkix-header-search .ant-input-search .ant-input,
+.checkix-header-search .ant-input-search .ant-input-affix-wrapper,
+.checkix-header-search .ant-input-search .ant-input-group-addon,
+.checkix-header-search .ant-input-search-button {
+  height: 40px;
+}
+
+.checkix-header-search .ant-input-search .ant-input-affix-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.checkix-header-search .ant-input-search .ant-input {
+  padding-block: 0;
+  line-height: 40px;
+}
+
+.checkix-header-search .ant-input-search .ant-input-group-addon {
+  overflow: hidden;
+}
+
+.checkix-pro-layout .ant-pro-sider-collapsed .checkix-brand-link {
+  justify-content: center;
+  gap: 0;
+}
+
+.checkix-pro-layout .ant-pro-sider-collapsed .checkix-brand-copy {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .checkix-pro-layout .ant-pro-global-header {
+    min-height: 104px;
+    align-items: flex-start;
+  }
+
+  .checkix-content-header {
+    min-height: 76px;
+    padding: 0.75rem 1rem;
+  }
+
+  .checkix-pro-layout--top .ant-pro-page-container .ant-pro-page-container-warp-page-header {
+    padding-block: 0.5rem 0.375rem;
+  }
+
+  .checkix-pro-layout--top .ant-pro-page-container .ant-pro-grid-content {
+    padding-block-start: 0.375rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .checkix-content-header {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .checkix-content-header-actions {
+    width: auto;
+    flex: 1 1 auto;
+  }
+}
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -187,6 +372,15 @@ body {
   background: transparent;
 }
 
+.calendar-shell .checkix-ant-calendar .ant-picker-panel,
+.calendar-shell .checkix-ant-calendar .ant-picker-content {
+  height: auto;
+}
+
+.calendar-shell .checkix-ant-calendar .ant-picker-body {
+  padding: 0;
+}
+
 .calendar-shell .checkix-ant-calendar .ant-picker-content th {
   padding: 0.75rem 0.25rem;
   color: hsl(var(--muted-foreground));
@@ -196,14 +390,35 @@ body {
   text-transform: uppercase;
 }
 
+.calendar-shell .checkix-ant-calendar .ant-picker-content {
+  table-layout: fixed;
+}
+
 .calendar-shell .checkix-ant-calendar .ant-picker-cell {
   padding: 3px;
+  vertical-align: top;
 }
 
 .calendar-shell .checkix-ant-calendar .ant-picker-cell-inner {
-  min-height: 118px;
+  display: block;
+  height: auto;
+  min-height: clamp(5.5rem, 9vw, 7rem);
   border: 0;
   border-radius: 0.875rem;
+}
+
+.calendar-shell .calendar-date-content {
+  min-height: clamp(5rem, 8vw, 6.5rem);
+}
+
+@media (max-width: 768px) {
+  .calendar-shell .checkix-ant-calendar .ant-picker-cell-inner {
+    min-height: 4.75rem;
+  }
+
+  .calendar-shell .calendar-date-content {
+    min-height: 4.25rem;
+  }
 }
 
 .calendar-shell .checkix-ant-calendar .ant-picker-cell-selected .ant-picker-cell-inner {

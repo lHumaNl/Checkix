@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
-from checkix.dependencies import PaginationParams, get_current_user, paginate_mapped
+from checkix.dependencies import MANAGE_WEBHOOKS_PERMISSION, PaginationParams, paginate_mapped, require_permission
 from checkix.exceptions import NotFoundException
 from checkix.models.checklist_instance import ChecklistInstance
 from checkix.models.user import User
@@ -141,7 +141,7 @@ async def _get_webhook_or_404(
 @router.get("/", response_model=None)
 async def list_webhooks(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
     pagination: Annotated[PaginationParams, Depends()],
 ) -> dict:
     """Return a paginated list of webhooks for the current user."""
@@ -159,7 +159,7 @@ async def list_webhooks(
 async def create_webhook(
     body: WebhookCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
 ) -> dict:
     """Create a new webhook."""
     webhook = Webhook(
@@ -181,7 +181,7 @@ async def update_webhook(
     webhook_id: int,
     body: WebhookUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
 ) -> dict:
     """Update an existing webhook."""
     webhook = await _get_webhook_or_404(db, webhook_id, current_user.id)
@@ -208,7 +208,7 @@ async def update_webhook(
 async def delete_webhook(
     webhook_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
 ) -> MessageResponse:
     """Delete a webhook permanently."""
     webhook = await _get_webhook_or_404(db, webhook_id, current_user.id)
@@ -222,7 +222,7 @@ async def delete_webhook(
 async def test_webhook(
     webhook_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
 ) -> MessageResponse:
     """Send a test payload to the webhook endpoint."""
     webhook = await _get_webhook_or_404(db, webhook_id, current_user.id)
@@ -251,7 +251,7 @@ async def test_webhook(
 @router.get("/events/", response_model=None)
 async def list_webhook_events(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_WEBHOOKS_PERMISSION))],
     pagination: Annotated[PaginationParams, Depends()],
     status: Annotated[Optional[str], Query()] = None,
 ) -> dict:

@@ -1,10 +1,10 @@
 import { test, expect } from '../../fixtures/auth.fixture'
-import { mockApiError } from '../../utils/helpers'
+import { expectAntStatisticIncrease, getAntStatisticNumber, mockApiError } from '../../utils/helpers'
 
 test.describe('Dashboard Page', () => {
   test('renders dashboard heading', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   })
 
   test('displays stats cards', async ({ page }) => {
@@ -14,6 +14,23 @@ test.describe('Dashboard Page', () => {
     // Stats cards should be visible
     await expect(page.getByText('Completed Checklists')).toBeVisible()
     await expect(page.getByText('Total Todos')).toBeVisible()
+  })
+
+  test('shows API-seeded dashboard metrics', async ({ page, e2eData }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    const completedBaseline = await getAntStatisticNumber(page, 'Completed Checklists')
+    const todosBaseline = await getAntStatisticNumber(page, 'Total Todos')
+    const eventsBaseline = await getAntStatisticNumber(page, 'Upcoming Events')
+
+    await e2eData.createRichScenario('dashboard')
+
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+
+    await expectAntStatisticIncrease(page, 'Completed Checklists', completedBaseline)
+    await expectAntStatisticIncrease(page, 'Total Todos', todosBaseline)
+    await expectAntStatisticIncrease(page, 'Upcoming Events', eventsBaseline)
   })
 
   test('displays activity heatmap section', async ({ page }) => {

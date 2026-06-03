@@ -140,7 +140,7 @@ export function ChecklistsPage() {
   })
 
   return (
-    <div className="flex h-full flex-col gap-4 sm:flex-row">
+    <div className="flex min-h-full w-full min-w-0 flex-col gap-4 lg:flex-row">
       {showFilters && (
         <FilterSidebar
           search={search}
@@ -154,7 +154,7 @@ export function ChecklistsPage() {
         />
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex w-full min-w-0 flex-1 flex-col">
         <Card className="mb-4 shadow-sm" styles={{ body: { padding: 16 } }}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <Space size={12} wrap>
@@ -167,7 +167,7 @@ export function ChecklistsPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 onSearch={setSearch}
                 placeholder={t('common.search')}
-                style={{ width: 280 }}
+                className="w-full sm:!w-72"
               />
             </Space>
 

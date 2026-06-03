@@ -1,10 +1,27 @@
+export type PermissionName = 'manage_assignments' | 'manage_run_links' | 'manage_webhooks'
+
+export interface UserGroupMembership {
+  id: number
+  group_id: number
+  name: string
+  role: string | null
+}
+
 export interface User {
   id: number
-  email: string
+  email: string | null
   username: string
+  first_name?: string | null
+  last_name?: string | null
   full_name: string | null
   avatar_url: string | null
   bio: string | null
+  is_active?: boolean
+  is_staff?: boolean
+  is_superuser?: boolean
+  groups?: UserGroupMembership[]
+  permissions?: PermissionName[]
+  capabilities?: string[]
   created_at: string
   updated_at: string
 }

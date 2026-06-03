@@ -107,9 +107,30 @@ function AppContent() {
                             <Route path="/todos" element={<TodosPage />} />
                             <Route path="/calendar" element={<CalendarPage />} />
                             <Route path="/community" element={<CommunityPage />} />
-                            <Route path="/assignments" element={<AssignmentsPage />} />
-                            <Route path="/run-links" element={<RunLinksPage />} />
-                            <Route path="/webhooks" element={<WebhooksPage />} />
+                            <Route
+                              path="/assignments"
+                              element={(
+                                <ProtectedRoute requiredPermission="manage_assignments">
+                                  <AssignmentsPage />
+                                </ProtectedRoute>
+                              )}
+                            />
+                            <Route
+                              path="/run-links"
+                              element={(
+                                <ProtectedRoute requiredPermission="manage_run_links">
+                                  <RunLinksPage />
+                                </ProtectedRoute>
+                              )}
+                            />
+                            <Route
+                              path="/webhooks"
+                              element={(
+                                <ProtectedRoute requiredPermission="manage_webhooks">
+                                  <WebhooksPage />
+                                </ProtectedRoute>
+                              )}
+                            />
                             <Route path="/notifications" element={<NotificationsPage />} />
                             <Route path="/stats" element={<StatsPage />} />
                             <Route path="/profile" element={<ProfilePage />} />

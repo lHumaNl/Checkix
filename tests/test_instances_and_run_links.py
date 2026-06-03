@@ -15,7 +15,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("clean_database")
 
 async def test_instance_lifecycle_copies_items_tracks_progress_and_logs_actions(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
     owner = await authenticated_user_factory("instance-owner")
     template = await _template_with_items(api_client, owner)
@@ -49,7 +49,7 @@ async def test_instance_lifecycle_copies_items_tracks_progress_and_logs_actions(
 
 async def test_instances_are_isolated_between_users(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
     owner = await authenticated_user_factory("owned-instance-user")
     outsider = await authenticated_user_factory("foreign-instance-user")
@@ -71,10 +71,10 @@ async def test_instances_are_isolated_between_users(
 
 async def test_run_links_enforce_ownership_and_public_usage_limits(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
-    owner = await authenticated_user_factory("link-owner")
-    outsider = await authenticated_user_factory("link-outsider")
+    owner = await authenticated_user_factory("link-owner", is_staff=True)
+    outsider = await authenticated_user_factory("link-outsider", is_staff=True)
     template = await _create_template(api_client, owner, "Shareable check")
 
     link_response = await api_client.post(
@@ -109,9 +109,9 @@ async def test_run_links_enforce_ownership_and_public_usage_limits(
 
 async def test_expired_run_link_cannot_be_executed(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
-    owner = await authenticated_user_factory("expired-link-owner")
+    owner = await authenticated_user_factory("expired-link-owner", is_staff=True)
     template = await _create_template(api_client, owner, "Expired link check")
     expires_at = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
 

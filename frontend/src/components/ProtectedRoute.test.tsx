@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nProvider } from '@/i18n'
 import type { User } from '@/types'
 
 vi.mock('@/contexts/AuthContext', async () => {
@@ -42,19 +43,29 @@ const createWrapper = (initialRoute: string = '/protected') => {
   
   return () => (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        <Routes>
-          <Route path="/login" element={<LocationDisplay />} />
-          <Route
-            path="/protected"
-            element={
-              <ProtectedRoute>
-                <div>Protected Content</div>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </MemoryRouter>
+      <I18nProvider>
+        <MemoryRouter initialEntries={[initialRoute]}>
+          <Routes>
+            <Route path="/login" element={<LocationDisplay />} />
+            <Route
+              path="/protected"
+              element={
+                <ProtectedRoute>
+                  <div>Protected Content</div>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/management"
+              element={
+                <ProtectedRoute requiredPermission="manage_assignments">
+                  <div>Management Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </MemoryRouter>
+      </I18nProvider>
     </QueryClientProvider>
   )
 }
@@ -118,5 +129,40 @@ describe('ProtectedRoute', () => {
     render(<Wrapper />)
     
     expect(screen.getByText('Loading...')).toBeDefined()
+  })
+
+  it('renders a 403 result when missing a required permission', async () => {
+    mockUseAuth.mockReturnValue({
+      user: authenticatedUser,
+      token: 'valid-token',
+      loading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: true,
+    })
+
+    const Wrapper = createWrapper('/management')
+
+    render(<Wrapper />)
+
+    expect(await screen.findByText('Access denied')).toBeInTheDocument()
+    expect(screen.queryByText('Management Content')).not.toBeInTheDocument()
+  })
+
+  it('renders permission-protected content when permission is present', async () => {
+    mockUseAuth.mockReturnValue({
+      user: { ...authenticatedUser, permissions: ['manage_assignments'] },
+      token: 'valid-token',
+      loading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: true,
+    })
+
+    const Wrapper = createWrapper('/management')
+
+    render(<Wrapper />)
+
+    expect(await screen.findByText('Management Content')).toBeInTheDocument()
   })
 })

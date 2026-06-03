@@ -23,6 +23,9 @@ class DashboardStatsOut(ORMSchema):
     completed_today: int = 0
     overdue_instances: int = 0
     avg_completion_rate: Optional[float] = None
+    total_todos: int = 0
+    completed_todos: int = 0
+    upcoming_events: int = 0
 
 
 class OverallStatsOut(ORMSchema):

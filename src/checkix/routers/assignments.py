@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from checkix.database import get_db
-from checkix.dependencies import PaginationParams, get_current_user, paginate_mapped
+from checkix.dependencies import MANAGE_ASSIGNMENTS_PERMISSION, PaginationParams, paginate_mapped, require_permission
 from checkix.exceptions import NotFoundException
 from checkix.models.assignment import Assignment
 from checkix.models.checklist import ChecklistItem, ChecklistTemplate
@@ -79,7 +79,7 @@ def _assignment_row(row) -> dict:
 @router.get("/", response_model=None)
 async def list_assignments(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_ASSIGNMENTS_PERMISSION))],
     pagination: Annotated[PaginationParams, Depends()],
     assignment_type: Annotated[Optional[str], Query()] = None,
 ) -> dict:
@@ -115,7 +115,7 @@ async def list_assignments(
 async def create_assignment(
     body: AssignmentCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_ASSIGNMENTS_PERMISSION))],
 ) -> dict:
     """Create a new assignment."""
     assignment = Assignment(
@@ -162,7 +162,7 @@ async def create_assignment(
 async def delete_assignment(
     assignment_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_permission(MANAGE_ASSIGNMENTS_PERMISSION))],
 ) -> MessageResponse:
     """Delete an assignment permanently."""
     result = await db.execute(

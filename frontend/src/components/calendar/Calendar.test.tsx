@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '@/i18n'
 import { CalendarView } from './Calendar'
 import type { CalendarEvent } from '@/types'
@@ -20,7 +20,9 @@ const event: CalendarEvent = {
   updated_at: '2026-06-01T00:00:00Z',
 }
 
-function renderCalendar(onCreateEvent = vi.fn(), onDateChange = vi.fn()) {
+function renderCalendar(onCreateEvent = vi.fn(), onDateChange = vi.fn(), language = 'en') {
+  localStorage.setItem('language', language)
+
   return render(
     <I18nProvider>
       <CalendarView
@@ -35,6 +37,10 @@ function renderCalendar(onCreateEvent = vi.fn(), onDateChange = vi.fn()) {
 }
 
 describe('CalendarView', () => {
+  afterEach(() => {
+    localStorage.removeItem('language')
+  })
+
   it('renders Ant Design toolbar controls and events', () => {
     renderCalendar()
 
@@ -42,7 +48,14 @@ describe('CalendarView', () => {
     expect(screen.getByText('Month')).toBeInTheDocument()
     expect(screen.getByText('Week')).toBeInTheDocument()
     expect(document.querySelector('.checkix-ant-calendar')).toBeInTheDocument()
+    expect(document.querySelector('.calendar-day-number')).toBeInTheDocument()
     expect(screen.getByText('Design review')).toBeInTheDocument()
+  })
+
+  it('renders Russian month heading with sentence casing', () => {
+    renderCalendar(vi.fn(), vi.fn(), 'ru')
+
+    expect(screen.getByRole('heading', { name: /Июнь 2026/ })).toBeInTheDocument()
   })
 
   it('opens event creation from the toolbar', () => {

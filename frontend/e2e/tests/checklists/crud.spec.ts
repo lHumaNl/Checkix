@@ -25,6 +25,16 @@ test.describe('Checklist CRUD Operations', () => {
     return page.getByRole('dialog').getByRole('textbox', { name: 'Item content' }).nth(index)
   }
 
+  function checklistCard(page: import('@playwright/test').Page, name: string) {
+    return page.locator('main .ant-card').filter({ hasText: name }).first()
+  }
+
+  async function gotoChecklistByName(page: import('@playwright/test').Page, name: string) {
+    const href = await page.getByRole('link', { name }).getAttribute('href')
+    expect(href).toMatch(/\/checklists\/\d+/)
+    await page.goto(href!)
+  }
+
   test('creates a new checklist', async ({ page }) => {
     const name = generateUniqueName('Test Checklist')
 
@@ -36,7 +46,7 @@ test.describe('Checklist CRUD Operations', () => {
     await page.getByRole('button', { name: 'Create Checklist' }).click()
 
     await page.waitForTimeout(1000)
-    await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 })
+    await expect(checklistCard(page, name)).toBeVisible({ timeout: 5000 })
   })
 
   test('creates checklist with items', async ({ page }) => {
@@ -55,7 +65,28 @@ test.describe('Checklist CRUD Operations', () => {
     await page.getByRole('button', { name: 'Create Checklist' }).click()
 
     await page.waitForTimeout(1000)
-    await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 })
+    await expect(checklistCard(page, name)).toBeVisible({ timeout: 5000 })
+  })
+
+  test('renders API-seeded checklist with folder, tag, and items', async ({ page, e2eData }) => {
+    const scenario = await e2eData.createRichScenario('checklists')
+
+    await page.goto('/checklists')
+    await page.locator('main input[placeholder*="Search"]').first().fill(scenario.checklistTitle)
+
+    const checklistCard = page.locator('main .ant-card').filter({ hasText: scenario.checklistTitle }).first()
+    await expect(checklistCard).toBeVisible({ timeout: 10_000 })
+    await expect(checklistCard).toContainText('In folder')
+    await expect(checklistCard).toContainText(scenario.tagName)
+
+    await page.goto(`/checklists/${scenario.checklistId}`)
+    await expect(page).toHaveURL(new RegExp(`/checklists/${scenario.checklistId}`))
+    await expect(page.getByRole('heading', { name: scenario.checklistTitle })).toBeVisible()
+    await expect(page.getByText(scenario.checklistDescription)).toBeVisible()
+
+    for (const itemTitle of scenario.checklistItemTitles) {
+      await expect(page.getByText(itemTitle)).toBeVisible()
+    }
   })
 
   test('edits an existing checklist', async ({ page }) => {
@@ -69,10 +100,10 @@ test.describe('Checklist CRUD Operations', () => {
     await page.getByRole('dialog').getByText('Active', { exact: true }).click()
     await page.getByRole('button', { name: 'Create Checklist' }).click()
     await page.waitForTimeout(1000)
-    await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 })
+    await expect(checklistCard(page, name)).toBeVisible({ timeout: 5000 })
 
     // Navigate to detail page
-    await page.getByText(name).first().click()
+    await gotoChecklistByName(page, name)
     await expect(page).toHaveURL(/\/checklists\/\d+/)
 
     // Click edit button (2nd button in action bar, after Start)
@@ -96,10 +127,10 @@ test.describe('Checklist CRUD Operations', () => {
     await fillDefaultItem(page)
     await page.getByRole('button', { name: 'Create Checklist' }).click()
     await page.waitForTimeout(1000)
-    await expect(page.getByText(name).first()).toBeVisible({ timeout: 5000 })
+    await expect(checklistCard(page, name)).toBeVisible({ timeout: 5000 })
 
     // Navigate to detail
-    await page.getByText(name).first().click()
+    await gotoChecklistByName(page, name)
     await expect(page).toHaveURL(/\/checklists\/\d+/)
 
     // Open MoreVertical dropdown (3rd button in action bar)
@@ -132,8 +163,7 @@ test.describe('Checklist CRUD Operations', () => {
     await page.waitForTimeout(500)
 
     // Should show at least one checklist (from previous tests)
-    const checklistLinks = page.locator('a[href^="/checklists/"]')
-    await expect(checklistLinks.first()).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('main .ant-card').filter({ hasText: /test|with|edit|delete|checklist/i }).first()).toBeVisible({ timeout: 5000 })
   })
 
   test('shows empty state when no results', async ({ page }) => {

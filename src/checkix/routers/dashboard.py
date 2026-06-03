@@ -13,7 +13,8 @@ from checkix.database import get_db
 from checkix.dependencies import PaginationParams, get_current_user, paginate
 from checkix.models.checklist import ChecklistTemplate
 from checkix.models.checklist_instance import ChecklistInstance, CompletionLog
-from checkix.models.todo import TodoList, TodoItem
+from checkix.models.calendar import CalendarEvent
+from checkix.models.todo import TodoItem, TodoList
 from checkix.models.user import User
 from checkix.schemas.stats import DashboardStatsOut
 
@@ -75,12 +76,36 @@ async def get_dashboard_stats(
     )
     avg_completion_rate = avg_rate.scalar_one_or_none()
 
+    total_todos_result = await db.execute(
+        select(func.count()).select_from(TodoList).where(
+            TodoList.user_id == current_user.id,
+            TodoList.is_deleted.is_(False),
+        )
+    )
+    completed_todos_result = await db.execute(
+        select(func.count()).select_from(TodoItem).join(TodoList).where(
+            TodoList.user_id == current_user.id,
+            TodoList.is_deleted.is_(False),
+            TodoItem.status == "completed",
+        )
+    )
+    upcoming_events_result = await db.execute(
+        select(func.count()).select_from(CalendarEvent).where(
+            CalendarEvent.user_id == current_user.id,
+            CalendarEvent.start_datetime >= now,
+            CalendarEvent.is_completed.is_(False),
+        )
+    )
+
     return DashboardStatsOut(
         total_templates=total_templates,
         active_instances=active_instances,
         completed_today=completed_today,
         overdue_instances=overdue_instances,
         avg_completion_rate=float(avg_completion_rate) if avg_completion_rate else None,
+        total_todos=total_todos_result.scalar_one(),
+        completed_todos=completed_todos_result.scalar_one(),
+        upcoming_events=upcoming_events_result.scalar_one(),
     )
 
 

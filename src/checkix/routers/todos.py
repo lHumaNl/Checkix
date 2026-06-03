@@ -6,13 +6,13 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, update
+from sqlalchemy import delete, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from checkix.database import get_db
 from checkix.dependencies import PaginationParams, get_current_user, paginate
 from checkix.exceptions import BadRequestException, NotFoundException
-from checkix.models.todo import TodoItem, TodoList
+from checkix.models.todo import TodoItem, TodoList, todo_lists_tags
 from checkix.models.tag import Tag
 from checkix.models.user import User
 from checkix.schemas.todo import (
@@ -73,6 +73,24 @@ async def _get_item_or_404(
     return item
 
 
+async def _set_todo_tags(
+    db: AsyncSession,
+    list_id: int,
+    tag_ids: list[int],
+    user_id: int,
+) -> None:
+    """Replace a todo list's tags without triggering async lazy loading."""
+    result = await db.execute(select(Tag).where(Tag.id.in_(tag_ids), Tag.user_id == user_id))
+    if len(result.scalars().all()) != len(tag_ids):
+        raise BadRequestException(detail="One or more tag IDs are invalid")
+    await db.execute(delete(todo_lists_tags).where(todo_lists_tags.c.todo_list_id == list_id))
+    if tag_ids:
+        await db.execute(
+            insert(todo_lists_tags),
+            [{"todo_list_id": list_id, "tag_id": tag_id} for tag_id in tag_ids],
+        )
+
+
 # ---------------------------------------------------------------------------
 # Todo List CRUD
 # ---------------------------------------------------------------------------
@@ -86,6 +104,7 @@ async def list_todo_lists(
     status: Annotated[Optional[str], Query()] = None,
     priority: Annotated[Optional[str], Query()] = None,
     folder_id: Annotated[Optional[int], Query()] = None,
+    search: Annotated[Optional[str], Query()] = None,
 ) -> dict:
     """Return a paginated list of todo lists for the current user."""
     query = (
@@ -102,6 +121,11 @@ async def list_todo_lists(
         query = query.where(TodoList.priority == priority)
     if folder_id is not None:
         query = query.where(TodoList.folder_id == folder_id)
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(
+            or_(TodoList.name.ilike(pattern), TodoList.description.ilike(pattern))
+        )
 
     return await paginate(db, query, pagination)
 
@@ -126,10 +150,7 @@ async def create_todo_list(
     await db.flush()
 
     if body.tags:
-        result = await db.execute(
-            select(Tag).where(Tag.id.in_(body.tags), Tag.user_id == current_user.id)
-        )
-        todo_list.tags = list(result.scalars().all())
+        await _set_todo_tags(db, todo_list.id, body.tags, current_user.id)
 
     await db.commit()
     await db.refresh(todo_list)
@@ -163,10 +184,7 @@ async def update_todo_list(
         setattr(todo_list, field, value)
 
     if tag_ids is not None:
-        result = await db.execute(
-            select(Tag).where(Tag.id.in_(tag_ids), Tag.user_id == current_user.id)
-        )
-        todo_list.tags = list(result.scalars().all())
+        await _set_todo_tags(db, todo_list.id, tag_ids, current_user.id)
 
     await db.commit()
     await db.refresh(todo_list)

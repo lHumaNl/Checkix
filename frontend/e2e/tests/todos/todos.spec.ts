@@ -31,11 +31,31 @@ test.describe('Todos Page', () => {
   })
 
   test('searches todo lists', async ({ page }) => {
-    await page.locator('input[placeholder*="Search"]').fill('nonexistent-list-xyz')
-    await page.waitForTimeout(500)
+    await page.locator('main input[placeholder*="Search"]').first().fill('nonexistent-list-xyz')
+    await expect(page.getByText(/no lists match your search/i)).toBeVisible()
 
     // Should show empty or filtered results
     await expect(page.locator('body')).toBeVisible()
+  })
+
+  test('renders and searches API-seeded todo list with items', async ({ page, e2eData }) => {
+    const scenario = await e2eData.createRichScenario('todos')
+
+    await page.goto('/todos')
+    const searchInput = page.locator('main input[placeholder*="Search"]').first()
+    await searchInput.fill(scenario.todoListName)
+
+    const listCard = page.locator('.ant-card').filter({ hasText: scenario.todoListName }).first()
+    await expect(listCard).toBeVisible({ timeout: 10_000 })
+    await expect(listCard).toContainText('1/2')
+
+    await listCard.getByLabel(/expand list/i).click()
+    for (const itemTitle of scenario.todoItemTitles) {
+      await expect(listCard.getByText(itemTitle)).toBeVisible()
+    }
+
+    await searchInput.fill(`${scenario.todoListName}-missing`)
+    await expect(page.getByText(/no lists match your search/i)).toBeVisible()
   })
 
   test('filters by status', async ({ page }) => {

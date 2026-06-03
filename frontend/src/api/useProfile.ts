@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { PermissionName, UserGroupMembership } from '@/types'
 import client from './client'
 
 export interface UserProfileNested {
@@ -21,9 +22,14 @@ export interface UserMe {
   first_name: string
   last_name: string
   is_active: boolean
+  is_staff: boolean
+  is_superuser: boolean
   date_joined: string
   last_login: string | null
   profile: UserProfileNested | null
+  groups: UserGroupMembership[]
+  permissions: PermissionName[]
+  capabilities: string[]
 }
 
 export interface UserMeUpdate {
@@ -32,6 +38,11 @@ export interface UserMeUpdate {
   notification_preferences?: Record<string, unknown> | null
   employee_id?: string | null
   department?: string | null
+}
+
+export interface PasswordChangePayload {
+  current_password: string
+  new_password: string
 }
 
 export function useProfile() {
@@ -55,6 +66,14 @@ export function useUpdateProfile() {
     onSuccess: (data) => {
       queryClient.setQueryData(['profile', 'me'], data)
       queryClient.invalidateQueries({ queryKey: ['profile', 'me'] })
+    },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (payload: PasswordChangePayload) => {
+      await client.post('/users/me/password/', payload)
     },
   })
 }

@@ -33,10 +33,17 @@ export function useChecklist(id: number | undefined) {
     queryKey: ['checklist', id],
     queryFn: async () => {
       const { data } = await client.get<ChecklistTemplate>(`/checklists/${id}`)
-      return data
+      return hydrateChecklistItems(data)
     },
     enabled: !!id,
   })
+}
+
+async function hydrateChecklistItems(checklist: ChecklistTemplate): Promise<ChecklistTemplate> {
+  if (typeof checklist.current_version !== 'number') return checklist
+  const { data } = await client.get(`/checklists/${checklist.id}/versions/${checklist.current_version}/items/`)
+  const items = Array.isArray(data) ? data : []
+  return { ...checklist, items, items_count: items.length }
 }
 
 export function useCreateChecklist() {

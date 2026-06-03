@@ -16,9 +16,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("clean_database")
 
 async def test_assignments_list_returns_display_fields(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
-    owner = await authenticated_user_factory("assignment-contract-owner")
+    owner = await authenticated_user_factory("assignment-contract-owner", is_staff=True)
     template = await _create_template(api_client, owner, "Safety audit")
     create_response = await api_client.post(
         "/api/assignments/",
@@ -41,9 +41,9 @@ async def test_assignments_list_returns_display_fields(
 
 async def test_run_links_list_returns_frontend_contract(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
-    owner = await authenticated_user_factory("run-link-contract-owner")
+    owner = await authenticated_user_factory("run-link-contract-owner", is_staff=True)
     template = await _create_template(api_client, owner, "Shareable checks")
     await api_client.post("/api/run-links/", json={"template_id": template["id"]}, headers=owner.headers)
     list_response = await api_client.get("/api/run-links/", headers=owner.headers)
@@ -57,7 +57,7 @@ async def test_run_links_list_returns_frontend_contract(
 
 async def test_notification_rules_list_returns_sequences_and_labels(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
     db_session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
     owner = await authenticated_user_factory("notification-contract-owner")
@@ -78,9 +78,9 @@ async def test_notification_rules_list_returns_sequences_and_labels(
 
 async def test_webhooks_list_returns_frontend_contract(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
-    owner = await authenticated_user_factory("webhook-contract-owner")
+    owner = await authenticated_user_factory("webhook-contract-owner", is_staff=True)
     create_response = await api_client.post(
         "/api/webhooks/",
         json={"name": "Deploy hook", "url": "https://example.com/hook", "events": ["instance_started"]},
@@ -98,7 +98,7 @@ async def test_webhooks_list_returns_frontend_contract(
 
 async def test_calendar_events_preserve_ant_design_fields(
     api_client: AsyncClient,
-    authenticated_user_factory: Callable[[str], Awaitable[AuthenticatedUser]],
+    authenticated_user_factory: Callable[..., Awaitable[AuthenticatedUser]],
 ) -> None:
     owner = await authenticated_user_factory("calendar-contract-owner")
     template = await _create_template(api_client, owner, "Launch checklist")

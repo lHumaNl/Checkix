@@ -46,8 +46,9 @@ export async function mockApiSuccess(page: Page, path: string, body: object, met
 }
 
 export async function expectToast(page: Page, message: string | RegExp) {
-  // Radix Toast uses data-state="open" on the li element
-  const toast = page.locator('[data-state="open"]').filter({ hasText: message })
+  const toast = page
+    .locator('[data-state="open"], .ant-message-notice, .ant-notification-notice')
+    .filter({ hasText: message })
   await expect(toast.first()).toBeVisible({ timeout: 5000 })
 }
 
@@ -64,4 +65,24 @@ export async function waitForSpinnerToDisappear(page: Page) {
 
 export function generateUniqueName(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+export async function getAntStatisticNumber(page: Page, label: string | RegExp): Promise<number> {
+  const statistic = page.locator('.ant-statistic').filter({ hasText: label }).first()
+  await expect(statistic).toBeVisible({ timeout: 10_000 })
+  const text = await statistic.locator('.ant-statistic-content-value').innerText()
+  return Number(text.replace(/[^0-9.-]/g, ''))
+}
+
+export async function expectAntStatisticAtLeast(page: Page, label: string | RegExp, minimum: number) {
+  await expect.poll(() => getAntStatisticNumber(page, label)).toBeGreaterThanOrEqual(minimum)
+}
+
+export async function expectAntStatisticIncrease(
+  page: Page,
+  label: string | RegExp,
+  baseline: number,
+  minimumIncrease = 1
+) {
+  await expect.poll(() => getAntStatisticNumber(page, label)).toBeGreaterThanOrEqual(baseline + minimumIncrease)
 }

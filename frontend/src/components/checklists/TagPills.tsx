@@ -1,7 +1,7 @@
 import { Tag, Tooltip } from 'antd'
 
 interface TagPillsProps {
-  tags: string[]
+  tags: Array<string | { name: string; color?: string | null }>
   maxVisible?: number
   size?: 'sm' | 'md'
   removable?: boolean
@@ -27,6 +27,15 @@ function getColorForTag(tag: string, colorMap?: Record<string, string>): string 
   return defaultColors[Math.abs(hash) % defaultColors.length]
 }
 
+function getTagName(tag: string | { name: string }): string {
+  return typeof tag === 'string' ? tag : tag.name
+}
+
+function getTagColor(tag: string | { name: string; color?: string | null }, colorMap?: Record<string, string>): string {
+  if (typeof tag !== 'string' && tag.color) return tag.color
+  return getColorForTag(getTagName(tag), colorMap)
+}
+
 export function TagPills({
   tags,
   maxVisible = 3,
@@ -45,21 +54,21 @@ export function TagPills({
     <div className="flex flex-wrap gap-1">
       {visibleTags.map(tag => (
         <Tag
-          key={tag}
-          color={getColorForTag(tag, colorMap)}
+          key={getTagName(tag)}
+          color={getTagColor(tag, colorMap)}
           className={className}
           closable={removable}
           onClose={(event) => {
             event.preventDefault()
             event.stopPropagation()
-            onRemove?.(tag)
+            onRemove?.(getTagName(tag))
           }}
         >
-          {tag}
+          {getTagName(tag)}
         </Tag>
       ))}
       {remainingCount > 0 && (
-        <Tooltip title={hiddenTags.join(', ')}>
+        <Tooltip title={hiddenTags.map(getTagName).join(', ')}>
           <Tag className={className}>+{remainingCount}</Tag>
         </Tooltip>
       )}

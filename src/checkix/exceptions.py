@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 
@@ -75,7 +76,7 @@ async def validation_exception_handler(
     exc: RequestValidationError,
 ) -> JSONResponse:
     """Handle FastAPI RequestValidationError and return 422."""
-    errors = exc.errors()
+    errors = jsonable_encoder(exc.errors())
     return JSONResponse(
         status_code=422,
         content={"detail": errors},

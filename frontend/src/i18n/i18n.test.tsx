@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { I18nProvider, detectClientLanguage, normalizeLanguage } from '@/i18n'
-import { LanguageSelector } from '@/components/LanguageSelector'
+import { I18nProvider, detectClientLanguage, normalizeLanguage, useI18n } from '@/i18n'
 import { messages, messageCatalog, messageLanguages } from '@/i18n/messages'
 
 describe('i18n', () => {
@@ -20,14 +19,14 @@ describe('i18n', () => {
   it('persists user language override', () => {
     render(
       <I18nProvider>
-        <LanguageSelector />
+        <LanguageSetter />
       </I18nProvider>
     )
 
-    fireEvent.change(screen.getByTestId('language-select'), { target: { value: 'es' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Language' }))
 
     expect(localStorage.getItem('language')).toBe('es')
-    expect(screen.getByLabelText('Idioma')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Idioma' })).toBeInTheDocument()
   })
 
   it('has complete translations for every supported language', () => {
@@ -54,3 +53,8 @@ describe('i18n', () => {
     }
   })
 })
+
+function LanguageSetter() {
+  const { setLanguage, t } = useI18n()
+  return <button onClick={() => setLanguage('es')}>{t('common.language')}</button>
+}

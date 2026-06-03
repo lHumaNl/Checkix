@@ -92,7 +92,7 @@ interface ToolbarProps {
 
 function CalendarToolbar({ currentDate, onCreateEvent, onNavigate, onViewChange, view }: ToolbarProps) {
   const { language, t } = useI18n()
-  const title = formatDate(currentDate, language, { month: 'long', year: 'numeric' })
+  const title = formatMonthTitle(currentDate, language)
   const views = ['month', 'week', 'day', 'agenda'] as const
 
   return (
@@ -129,15 +129,15 @@ interface MonthCalendarProps {
 }
 
 function MonthCalendar({ currentDate, events, selectedDate, onCreateEvent, onDateSelect, onEventClick }: MonthCalendarProps) {
-  const cellRender: CalendarProps<Dayjs>['cellRender'] = (value, info) => {
+  const fullCellRender: CalendarProps<Dayjs>['fullCellRender'] = (value, info) => {
     if (info.type !== 'date') return info.originNode
     return <MonthDateCell date={value.toDate()} events={events} selectedDate={selectedDate} visibleMonth={currentDate} onCreateEvent={onCreateEvent} onEventClick={onEventClick} />
   }
 
   return (
     <AntCalendar
-      className="checkix-ant-calendar h-full rounded-2xl border border-gray-200/70 bg-white/90 p-2 shadow-inner dark:border-gray-800 dark:bg-gray-900/70"
-      cellRender={cellRender}
+      className="checkix-ant-calendar rounded-2xl border border-gray-200/70 bg-white/90 p-2 shadow-inner dark:border-gray-800 dark:bg-gray-900/70"
+      fullCellRender={fullCellRender}
       fullscreen
       headerRender={() => null}
       value={dayjs(currentDate)}
@@ -163,9 +163,11 @@ function MonthDateCell({ date, events, selectedDate, visibleMonth, onCreateEvent
   const isMuted = !isSameMonth(date, visibleMonth)
 
   return (
-    <div className={`group flex h-full min-h-[112px] flex-col rounded-xl p-2 transition ${isSelected ? 'bg-blue-500/10 ring-1 ring-blue-400' : 'hover:bg-blue-500/5'} ${isMuted ? 'opacity-45' : ''}`}>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">{date.getDate()}</span>
+    <div className={`calendar-date-content group flex min-h-[72px] flex-col rounded-xl p-2 transition ${isSelected ? 'bg-blue-500/10 ring-1 ring-blue-400' : 'hover:bg-blue-500/5'} ${isMuted ? 'opacity-45' : ''}`}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <time className="calendar-day-number text-sm font-bold text-gray-800 dark:text-gray-100" dateTime={formatIsoDate(date)}>
+          {date.getDate()}
+        </time>
         <Tooltip title={t('calendar.newEvent')}>
           <Button size="small" type="text" icon={<Plus size={13} />} onClick={event => { event.stopPropagation(); onCreateEvent(date) }} />
         </Tooltip>
@@ -365,6 +367,22 @@ function groupEventsByDay(events: CalendarEvent[]) {
 
 function formatDate(date: Date, language: string, options: Intl.DateTimeFormatOptions) {
   return date.toLocaleDateString(language, options)
+}
+
+function formatMonthTitle(date: Date, language: string) {
+  const title = formatDate(date, language, { month: 'long', year: 'numeric' })
+  return capitalizeHeading(title, language)
+}
+
+function capitalizeHeading(value: string, language: string) {
+  if (!value) return value
+  return value.charAt(0).toLocaleUpperCase(language) + value.slice(1)
+}
+
+function formatIsoDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 function formatEventTime(event: CalendarEvent, language: string, allDayLabel: string) {

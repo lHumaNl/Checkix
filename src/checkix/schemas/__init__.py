@@ -85,8 +85,10 @@ from checkix.schemas.user import (
     GroupCreate,
     GroupMembershipOut,
     GroupOut,
+    UserGroupMembershipOut,
     UserMeOut,
     UserOut,
+    UserPasswordChange,
     UserProfileOut,
     UserProfileUpdate,
 )
@@ -172,11 +174,13 @@ __all__ = [
     # user
     "UserOut",
     "UserMeOut",
+    "UserPasswordChange",
     "UserProfileOut",
     "UserProfileUpdate",
     "GroupOut",
     "GroupCreate",
     "GroupMembershipOut",
+    "UserGroupMembershipOut",
     # webhook
     "WebhookOut",
     "WebhookCreate",

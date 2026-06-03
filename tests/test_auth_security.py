@@ -6,8 +6,9 @@ from collections.abc import Awaitable, Callable
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from checkix.models.user import User
+from checkix.models.user import Group, GroupMembership, User
 from tests.conftest import TEST_PASSWORD
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("clean_database")]
@@ -130,6 +131,87 @@ async def test_token_verify_reports_valid_and_invalid_tokens(
     assert invalid_response.json()["valid"] is False
 
 
+async def test_users_me_returns_backend_permissions_and_memberships(
+    api_client: AsyncClient,
+    user_factory: Callable[..., Awaitable[User]],
+    db_session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    user = await user_factory("profile-rbac-user", is_staff=True)
+    await _add_group_membership(db_session_factory, user.id)
+    tokens = await _login(api_client, "profile-rbac-user")
+
+    response = await api_client.get(
+        "/api/users/me/",
+        headers={"Authorization": f"Bearer {tokens['access']}"},
+    )
+
+    body = response.json()
+    assert response.status_code == 200, response.text
+    assert body["is_staff"] is True
+    assert body["is_superuser"] is False
+    assert body["groups"] == [{"id": 1, "group_id": 1, "name": "Operators", "role": "owner"}]
+    assert set(body["permissions"]) == {"manage_assignments", "manage_run_links", "manage_webhooks"}
+    assert body["capabilities"] == ["management"]
+
+
+async def test_current_user_can_change_password(
+    api_client: AsyncClient,
+    user_factory: Callable[..., Awaitable[User]],
+) -> None:
+    await user_factory("password-change-user")
+    tokens = await _login(api_client, "password-change-user")
+    new_password = "changed-password-123"
+
+    response = await api_client.post(
+        "/api/users/me/password/",
+        headers={"Authorization": f"Bearer {tokens['access']}"},
+        json={"current_password": TEST_PASSWORD, "new_password": new_password},
+    )
+
+    old_login = await api_client.post(
+        "/api/auth/token/",
+        json={"username": "password-change-user", "password": TEST_PASSWORD},
+    )
+    new_login = await api_client.post(
+        "/api/auth/token/",
+        json={"username": "password-change-user", "password": new_password},
+    )
+    assert response.status_code == 204, response.text
+    assert old_login.status_code == 401
+    assert new_login.status_code == 200, new_login.text
+
+
+async def test_current_user_password_change_rejects_wrong_current_password(
+    api_client: AsyncClient,
+    user_factory: Callable[..., Awaitable[User]],
+) -> None:
+    await user_factory("password-reject-user")
+    tokens = await _login(api_client, "password-reject-user")
+
+    response = await api_client.post(
+        "/api/users/me/password/",
+        headers={"Authorization": f"Bearer {tokens['access']}"},
+        json={"current_password": "wrong-password", "new_password": "changed-password-123"},
+    )
+
+    assert response.status_code == 400
+
+
+async def test_management_api_requires_backend_permission(
+    api_client: AsyncClient,
+    user_factory: Callable[..., Awaitable[User]],
+) -> None:
+    await user_factory("regular-rbac-user")
+    tokens = await _login(api_client, "regular-rbac-user")
+
+    response = await api_client.get(
+        "/api/assignments/",
+        headers={"Authorization": f"Bearer {tokens['access']}"},
+    )
+
+    assert response.status_code == 403
+
+
 async def _login(api_client: AsyncClient, username: str) -> dict[str, str]:
     response = await api_client.post(
         "/api/auth/token/",
@@ -137,3 +219,15 @@ async def _login(api_client: AsyncClient, username: str) -> dict[str, str]:
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+async def _add_group_membership(
+    db_session_factory: async_sessionmaker[AsyncSession],
+    user_id: int,
+) -> None:
+    async with db_session_factory() as session:
+        group = Group(name="Operators", description="Operational users")
+        session.add(group)
+        await session.flush()
+        session.add(GroupMembership(user_id=user_id, group_id=group.id, role="owner"))
+        await session.commit()
